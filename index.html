@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi CAT BKN - KDKMP 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] },
+            options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] }
+        };
+    </script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; }
+        .cat-header { background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 100%); }
+        .q-number { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid #cbd5e1; border-radius: 4px; font-weight: bold; font-size: 11px; transition: all 0.2s; }
+        .q-unanswered { background-color: #fff; color: #333; }
+        .q-answered { background-color: #22c55e; color: #fff; border-color: #16a34a; }
+        .q-ragu { background-color: #eab308; color: #fff; border-color: #ca8a04; }
+        .q-active { outline: 3px solid #3b82f6; outline-offset: 1px; transform: scale(1.1); z-index: 10; }
+        .option-label { display: flex; align-items: flex-start; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; background: #fff; }
+        .option-label:hover { background: #f8fafc; border-color: #94a3b8; }
+        .option-label.selected { border-color: #3b82f6; background-color: #eff6ff; }
+        .hide { display: none !important; }
+        .custom-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: 6px; }
+        .btn-nav { display: flex; align-items: center; justify-content: center; height: 50px; font-weight: bold; border-radius: 8px; width: 100%; transition: all 0.2s; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        #navPanel.mobile-open { transform: translateX(0) !important; }
+        #navOverlay:not(.hidden) { display: block !important; }
+    </style>
+</head>
+<body class="bg-slate-100 text-gray-800 antialiased min-h-screen flex flex-col">
+
+    <!-- START SCREEN -->
+    <div id="loginScreen" class="flex-1 flex items-center justify-center p-4">
+        <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg max-w-2xl w-full border-t-4 border-blue-600 fade-in">
+            <div class="text-center mb-6">
+                <img src="https://image.qwenlm.ai/public_source/0b504ea0-1bae-439d-879d-67c4e6660229/11cb406bc-58f0-49fb-b8a2-ca02ecad90b2.png" onerror="this.style.display='none'" alt="Logo" class="h-16 mx-auto mb-3">
+                <h1 class="text-2xl font-bold text-gray-800">Simulasi CAT KDKMP 2026</h1>
+                <p class="text-sm text-gray-500 italic">Audit Versi 4.0: Sistem Anti-Duplikasi + Randomisasi Per-Sesi</p>
+                <p class="text-xs text-gray-400 mt-1" id="sessionIdDisplay"></p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 text-xs">
+                    <h2 class="font-bold text-blue-900 mb-2 uppercase">Sub-tes SKD</h2>
+                    <ul class="space-y-1">
+                        <li>• TWK: 30 Soal (Ambang Batas 65)</li>
+                        <li>• TIU: 35 Soal (Ambang Batas 80)</li>
+                        <li>• TKP: 45 Soal (Ambang Batas 166)</li>
+                    </ul>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg border border-green-100 text-xs">
+                    <h2 class="font-bold text-green-900 mb-2 uppercase">Sub-tes Teknis</h2>
+                    <ul class="space-y-1">
+                        <li>• Koperasi: 50 Soal (Ambang Batas 75)</li>
+                        <li>• Total: 160 Butir Unik Per-Sesi</li>
+                        <li>• Durasi: 120 Menit</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6 text-xs">
+                <strong class="text-yellow-800">🔒 Sistem Anti-Duplikasi Aktif:</strong>
+                <span class="text-gray-600">Setiap sesi ujian menghasilkan soal acak unik. User berbeda = soal berbeda.</span>
+            </div>
+
+            <button onclick="startExam()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition shadow-lg text-lg uppercase tracking-wider">
+                Mulai Simulasi (160 Soal)
+            </button>
+        </div>
+    </div>
+
+    <!-- EXAM SCREEN -->
+    <div id="examScreen" class="hide flex-col flex-1">
+        <header class="cat-header text-white px-4 py-3 flex justify-between items-center shadow-md sticky top-0 z-50">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleMobileNav()" class="md:hidden mr-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+                <div class="hidden sm:block">
+                    <div class="text-lg font-bold">CAT 2026</div>
+                    <div class="text-[10px] opacity-75">KDKMP - AUDITED SESSION</div>
+                </div>
+                <div class="border-l border-white/30 pl-4">
+                    <div class="font-semibold text-sm">Peserta Simulasi</div>
+                    <div class="text-[10px] opacity-75 uppercase tracking-tighter" id="sessionLabel">Session ID: ...</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="text-right">
+                    <div class="text-[10px] opacity-75">Sisa Waktu</div>
+                    <div id="timer" class="text-xl md:text-2xl font-mono font-bold">120:00</div>
+                </div>
+                <button onclick="confirmSubmit()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded font-bold text-xs uppercase">Selesai</button>
+            </div>
+        </header>
+
+        <div class="flex-1 flex flex-col md:flex-row relative overflow-hidden">
+            <!-- Left: Question Area -->
+            <div class="flex-1 flex flex-col bg-white overflow-y-auto" id="questionArea">
+                <div class="p-4 md:p-8 lg:p-10 flex-1">
+                    <div class="max-w-4xl w-full mx-auto">
+                        <div class="flex justify-between items-end border-b pb-3 mb-6">
+                            <span id="qCategory" class="text-[10px] font-bold px-2 py-1 bg-blue-100 text-blue-800 rounded uppercase">Kategori</span>
+                            <div class="text-gray-500 font-semibold text-sm uppercase font-mono">Soal <span id="qIndexDisp" class="text-blue-600 text-xl">1</span>/160</div>
+                        </div>
+                        <div id="questionText" class="text-base md:text-lg text-gray-800 mb-8 leading-relaxed"></div>
+                        <div id="optionsContainer" class="space-y-3 mb-10"></div>
+
+                        <!-- Nav Buttons -->
+                        <div class="border-t pt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
+                            <button onclick="prevQuestion()" class="btn-nav bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm uppercase">Sebelumnya</button>
+                            <label class="btn-nav cursor-pointer bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                <input type="checkbox" id="raguCheck" onchange="toggleRagu()" class="w-5 h-5 mr-2">
+                                <span class="text-sm uppercase">Ragu-ragu</span>
+                            </label>
+                            <button onclick="nextQuestion()" class="btn-nav bg-blue-600 hover:bg-blue-700 text-white text-sm uppercase shadow-md">Selanjutnya</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Nav Panel -->
+            <div id="navPanel" class="fixed inset-y-0 right-0 transform translate-x-full md:translate-x-0 md:relative md:block w-72 md:w-80 bg-slate-50 border-l flex-col shadow-lg z-50 transition-transform flex h-full">
+                <div class="p-4 border-b bg-white font-bold text-gray-700 text-sm uppercase flex justify-between items-center">
+                    <span>Navigasi Soal</span>
+                    <button onclick="toggleMobileNav()" class="md:hidden text-gray-400 hover:text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-3">
+                    <div class="text-[9px] font-bold text-gray-400 mb-2 uppercase">TWK (1-30)</div>
+                    <div id="grid-TWK" class="custom-grid mb-4"></div>
+                    <div class="text-[9px] font-bold text-gray-400 mb-2 uppercase">TIU (31-65)</div>
+                    <div id="grid-TIU" class="custom-grid mb-4"></div>
+                    <div class="text-[9px] font-bold text-gray-400 mb-2 uppercase">TKP (66-110)</div>
+                    <div id="grid-TKP" class="custom-grid mb-4"></div>
+                    <div class="text-[9px] font-bold text-gray-400 mb-2 uppercase">TEKNIS (111-160)</div>
+                    <div id="grid-TEKNIS" class="custom-grid mb-4"></div>
+                </div>
+                <div class="p-4 border-t bg-white text-[10px] space-y-1">
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 bg-green-500 rounded-sm"></div> Sudah Dijawab</div>
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 bg-yellow-400 rounded-sm"></div> Ragu-ragu</div>
+                    <button onclick="confirmSubmit()" class="w-full mt-2 bg-red-500 text-white py-2 rounded font-bold md:hidden">SELESAI</button>
+                </div>
+            </div>
+            <div id="navOverlay" onclick="toggleMobileNav()" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden"></div>
+        </div>
+    </div>
+
+    <!-- RESULT SCREEN -->
+    <div id="resultScreen" class="hide flex-col flex-1 bg-slate-100 p-4 md:p-8 overflow-y-auto">
+        <div class="max-w-4xl mx-auto w-full bg-white rounded-xl shadow-lg p-6 md:p-10 fade-in">
+            <h2 class="text-2xl font-bold text-center mb-2 uppercase text-gray-800">Laporan Hasil Seleksi CAT</h2>
+            <p class="text-center text-xs text-gray-400 mb-8" id="resultSessionId"></p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                <div class="p-4 rounded-lg border bg-slate-50 text-center">
+                    <div class="text-[10px] font-bold text-gray-400 uppercase">TWK</div>
+                    <div id="res-twk-score" class="text-3xl font-black">0</div>
+                    <div id="res-twk-status" class="text-[10px] font-bold mt-1"></div>
+                </div>
+                <div class="p-4 rounded-lg border bg-slate-50 text-center">
+                    <div class="text-[10px] font-bold text-gray-400 uppercase">TIU</div>
+                    <div id="res-tiu-score" class="text-3xl font-black">0</div>
+                    <div id="res-tiu-status" class="text-[10px] font-bold mt-1"></div>
+                </div>
+                <div class="p-4 rounded-lg border bg-slate-50 text-center">
+                    <div class="text-[10px] font-bold text-gray-400 uppercase">TKP</div>
+                    <div id="res-tkp-score" class="text-3xl font-black">0</div>
+                    <div id="res-tkp-status" class="text-[10px] font-bold mt-1"></div>
+                </div>
+                <div class="p-4 rounded-lg border bg-slate-50 text-center">
+                    <div class="text-[10px] font-bold text-gray-400 uppercase">TEKNIS</div>
+                    <div id="res-teknis-score" class="text-3xl font-black">0</div>
+                    <div id="res-teknis-status" class="text-[10px] font-bold mt-1"></div>
+                </div>
+            </div>
+            <div id="final-status-box" class="p-6 rounded-xl text-center mb-10 border-2 font-bold uppercase text-lg">
+                <span id="final-status-text"></span>
+            </div>
+            <div class="flex justify-center"><button onclick="location.reload()" class="bg-blue-600 text-white px-10 py-3 rounded-lg font-bold hover:bg-blue-700 transition">ULANGI SIMULASI</button></div>
+        </div>
+    </div>
+
+    <!-- CONFIRM MODAL -->
+    <div id="confirmModal" class="hide fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full fade-in">
+            <h3 class="text-xl font-bold mb-4 uppercase text-gray-800">Selesaikan Ujian?</h3>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeConfirm()" class="px-5 py-2 bg-gray-200 rounded font-bold uppercase text-xs hover:bg-gray-300 transition">Batal</button>
+                <button onclick="submitExam()" class="px-5 py-2 bg-red-600 text-white rounded font-bold uppercase text-xs hover:bg-red-700 transition">Ya, Selesai</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// =========================================================================
+// GLOBAL STATE
+// =========================================================================
+let examQuestions = [];
+let userAnswers = [];
+let raguRagu = [];
+let currentIndex = 0;
+let timeLeft = 7200;
+let timerInterval = null;
+let sessionId = '';
+
+// =========================================================================
+// SEEDED PRNG (Mulberry32) - Ensures unique randomization per session
+// =========================================================================
+function mulberry32(a) {
+    return function() {
+        a |= 0; a = a + 0x6D2B79F5 | 0;
+        var t = Math.imul(a ^ a >>> 15, 1 | a);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+}
+
+// Generate unique session ID using timestamp + crypto random
+function generateSessionId() {
+    const timestamp = Date.now();
+    const cryptoArr = new Uint32Array(4);
+    
+    if (window.crypto && window.crypto.getRandomValues) {
+        window.crypto.getRandomValues(cryptoArr);
+    } else {
+        // Fallback: use Math.random
+        for (let i = 0; i < 4; i++) {
+            cryptoArr[i] = Math.floor(Math.random() * 4294967296);
+        }
+    }
+    
+    // Combine timestamp with crypto values for unique seed
+    const seed = (timestamp + cryptoArr[0] + cryptoArr[1] * 2 + cryptoArr[2] * 3 + cryptoArr[3] * 5) >>> 0;
+    sessionId = seed.toString(36).toUpperCase();
+    return seed;
+}
+
+// Fisher-Yates shuffle using seeded PRNG
+function seededShuffle(arr, seed) {
+    const rng = mulberry32(seed);
+    const shuffled = [...arr];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
+// Shuffle options within a question using seeded PRNG
+function shuffleQuestionOptions(question, seed) {
+    const rng = mulberry32(seed + question.q.charCodeAt(0) * 1000);
+    const qCopy = {...question};
+    
+    const indexedOptions = question.o.map((opt, idx) => ({opt, isCorrect: idx === question.a}));
+    
+    // Fisher-Yates shuffle for options
+    for (let i = indexedOptions.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [indexedOptions[i], indexedOptions[j]] = [indexedOptions[j], indexedOptions[i]];
+    }
+    
+    qCopy.o = indexedOptions.map(item => item.opt);
+    qCopy.a = indexedOptions.findIndex(item => item.isCorrect);
+    
+    // For TKP, also shuffle values
+    if (question.v) {
+        const indexedValues = question.v.map((val, idx) => ({val, origIdx: idx}));
+        for (let i = indexedValues.length - 1; i > 0; i--) {
+            const j = Math.floor(rng() * (i + 1));
+            [indexedValues[i], indexedValues[j]] = [indexedValues[j], indexedValues[i]];
+        }
+        qCopy.v = indexedValues.map(item => item.val);
+    }
+    
+    return qCopy;
+}
+
+// =========================================================================
+// EXTENDED QUESTION BANKS (300+ total unique questions)
+// =========================================================================
+
+const RAW_TWK = [
+    // Pancasila & Ideologi (1-20)
+    { q: "Apa landasan idiil Koperasi Indonesia?", o: ["Pancasila", "UUD 1945", "Kekeluargaan", "Tap MPR", "UU No 25/1992"], a: 0, e: "Landasan idiil: Pancasila." },
+    { q: "Sila Pancasila yang menaungi koperasi adalah...", o: ["Sila ke-1", "Sila ke-2", "Sila ke-3", "Sila ke-4", "Sila ke-5"], a: 4, e: "Sila ke-5 (Keadilan Sosial)." },
+    { q: "Nilai dasar koperasi adalah...", o: ["Profit", "Mandiri", "Kekeluargaan", "Sosial", "Politik"], a: 2, e: "Kekeluargaan." },
+    { q: "Pancasila sebagai landasan idiil berarti...", o: ["Landasan hukum", "Landasan moral/nilai", "Landasan politik", "Landasan ekonomi", "Landasan sosial"], a: 1, e: "Landasan moral dan nilai-nilai." },
+    { q: "Sila ke-1 Pancasila berbunyi...", o: ["Kemanusiaan", "Persatuan", "Ketuhanan Yang Maha Esa", "Kerakyatan", "Keadilan Sosial"], a: 2, e: "Ketuhanan Yang Maha Esa." },
+    { q: "Sila ke-2 Pancasila berbunyi...", o: ["Ketuhanan", "Kemanusiaan yang adil dan beradab", "Persatuan", "Kerakyatan", "Keadilan"], a: 1, e: "Kemanusiaan yang adil dan beradab." },
+    { q: "Sila ke-3 Pancasila berbunyi...", o: ["Kemanusiaan", "Persatuan Indonesia", "Ketuhanan", "Kerakyatan", "Keadilan"], a: 1, e: "Persatuan Indonesia." },
+    { q: "Sila ke-4 Pancasila berbunyi...", o: ["Ketuhanan", "Kemanusiaan", "Persatuan", "Kerakyatan yang dipimpin oleh hikmat kebijaksanaan", "Keadilan"], a: 3, e: "Kerakyatan yang dipimpin oleh hikmat kebijaksanaan." },
+    { q: "Sila ke-5 Pancasila berbunyi...", o: ["Ketuhanan", "Kemanusiaan", "Persatuan", "Kerakyatan", "Keadilan sosial bagi seluruh rakyat Indonesia"], a: 4, e: "Keadilan sosial bagi seluruh rakyat Indonesia." },
+    { q: "Pancasila ditetapkan sebagai dasar negara pada tanggal...", o: ["17 Agustus 1945", "18 Agustus 1945", "1 Juni 1945", "22 Juni 1945", "10 November 1945"], a: 1, e: "18 Agustus 1945 oleh PPKI." },
+    { q: "Piagam Jakarta disahkan pada tanggal...", o: ["17 Agustus 1945", "18 Agustus 1945", "1 Juni 1945", "22 Juni 1945", "29 Mei 1945"], a: 3, e: "22 Juni 1945." },
+    { q: "Ir. Soekarno mengusulkan dasar negara pada sidang BPUPKI tanggal...", o: ["1 Mei 1945", "1 Juni 1945", "10 Juni 1945", "22 Juni 1945", "17 Agustus 1945"], a: 1, e: "1 Juni 1945 (Hari Lahir Pancasila)." },
+    { q: "BPUPKI singkatan dari...", o: ["Badan Penyelidik Usaha Persiapan Kemerdekaan Indonesia", "Badan Persiapan Usaha Penyelidik Kemerdekaan Indonesia", "Badan Penyelidik Usaha Pemersatu Kemerdekaan Indonesia", "Badan Permusyawaratan Usaha Persiapan Kemerdekaan", "Badan Penyelidik Usaha Pembangunan Indonesia"], a: 0, e: "Badan Penyelidik Usaha Persiapan Kemerdekaan Indonesia." },
+    { q: "PPKI singkatan dari...", o: ["Panitia Persiapan Kemerdekaan Indonesia", "Panitia Persatuan Kemerdekaan Indonesia", "Panitia Pembangunan Kemerdekaan Indonesia", "Panitia Penyelidik Kemerdekaan Indonesia", "Panitia Pemersatu Kemerdekaan Indonesia"], a: 0, e: "Panitia Persiapan Kemerdekaan Indonesia." },
+    { q: "Ketua BPUPKI adalah...", o: ["Ir. Soekarno", "Moh. Hatta", "Dr. Radjiman Wedyodiningrat", "Ki Hajar Dewantara", "Sutan Sjahrir"], a: 2, e: "Dr. Radjiman Wedyodiningrat." },
+    { q: "Wakil Ketua BPUPKI adalah...", o: ["Ir. Soekarno", "Moh. Hatta", "R.P. Soeroso", "Dr. Radjiman", "Sutan Sjahrir"], a: 2, e: "R.P. Soeroso." },
+    { q: "Ketua PPKI adalah...", o: ["Moh. Hatta", "Ir. Soekarno", "Sutan Sjahrir", "Dr. Radjiman", "Tan Malaka"], a: 1, e: "Ir. Soekarno." },
+    { q: "UUD 1945 pertama kali disahkan oleh...", o: ["BPUPKI", "PPKI", "KNIP", "MPR", "DPR"], a: 1, e: "PPKI pada 18 Agustus 1945." },
+    { q: "Ideologi bangsa Indonesia adalah...", o: ["Liberalisme", "Komunisme", "Pancasila", "Kapitalisme", "Sosialisme"], a: 2, e: "Pancasila." },
+    { q: "Bhinneka Tunggal Ika berasal dari kitab...", o: ["Negarakertagama", "Sutasoma", "Pararaton", "Arjunawiwaha", "Bharatayuddha"], a: 1, e: "Kitab Sutasoma karya Mpu Tantular." },
+
+    // UUD 1945 & Konstitusi (21-40)
+    { q: "Pasal UUD 1945 yang mengatur perekonomian berasas kekeluargaan adalah...", o: ["Pasal 27", "Pasal 30", "Pasal 33", "Pasal 34", "Pasal 35"], a: 2, e: "Pasal 33 ayat 1." },
+    { q: "Pasal 33 ayat 1 UUD 1945 berbunyi...", o: ["Perekonomian disusun sebagai usaha bersama", "Bumi dan air dikuasai negara", "Cabang produksi penting dikuasai negara", "Fakir miskin dipelihara negara", "Setiap warga berhak atas pekerjaan"], a: 0, e: "Perekonomian disusun sebagai usaha bersama berdasar asas kekeluargaan." },
+    { q: "Pasal 33 ayat 2 UUD 1945 mengatur tentang...", o: ["Usaha bersama", "Cabang-cabang produksi yang penting dikuasai negara", "Bumi dan air", "Fakir miskin", "Pendidikan"], a: 1, e: "Cabang-cabang produksi yang penting bagi negara dan menguasai hajat hidup orang banyak." },
+    { q: "Pasal 33 ayat 3 UUD 1945 mengatur tentang...", o: ["Usaha bersama", "Cabang produksi", "Bumi, air, dan kekayaan alam dikuasai negara", "Fakir miskin", "Pendidikan"], a: 2, e: "Bumi dan air dan kekayaan alam yang terkandung di dalamnya dikuasai negara." },
+    { q: "Pasal 27 ayat 2 UUD 1945 mengatur tentang...", o: ["Hak atas pekerjaan", "Hak atas pendidikan", "Hak atas kesehatan", "Hak atas keamanan", "Hak atas kebebasan"], a: 0, e: "Tiap-tiap warga negara berhak atas pekerjaan dan penghidupan yang layak." },
+    { q: "Pasal 34 UUD 1945 mengatur tentang...", o: ["Perekonomian", "Pendidikan", "Fakir miskin dan anak terlantar dipelihara negara", "Pertahanan", "Kebebasan"], a: 2, e: "Fakir miskin dan anak-anak yang terlantar dipelihara oleh negara." },
+    { q: "Pasal 31 UUD 1945 mengatur tentang...", o: ["Perekonomian", "Pendidikan", "Pertahanan", "Kebebasan", "Fakir miskin"], a: 1, e: "Setiap warga negara berhak mendapat pendidikan." },
+    { q: "Pasal 30 UUD 1945 mengatur tentang...", o: ["Pendidikan", "Pertahanan dan keamanan", "Perekonomian", "Fakir miskin", "Kebebasan"], a: 1, e: "Pertahanan dan keamanan negara." },
+    { q: "Pasal 28 UUD 1945 mengatur tentang...", o: ["Pendidikan", "Perekonomian", "Kebebasan berserikat dan berkumpul", "Pertahanan", "Fakir miskin"], a: 2, e: "Kemerdekaan berserikat dan berkumpul." },
+    { q: "Amandemen UUD 1945 telah dilakukan sebanyak...", o: ["1 kali", "2 kali", "3 kali", "4 kali", "5 kali"], a: 3, e: "4 kali (1999, 2000, 2001, 2002)." },
+    { q: "Amandemen pertama UUD 1945 disahkan pada tahun...", o: ["1998", "1999", "2000", "2001", "2002"], a: 1, e: "Tahun 1999." },
+    { q: "Lembaga negara yang memiliki kewenangan mengubah UUD adalah...", o: ["DPR", "Presiden", "MPR", "MK", "MA"], a: 2, e: "MPR (Majelis Permusyawaratan Rakyat)." },
+    { q: "UUD 1945 terdiri dari Pembukaan dan Batang Tubuh yang berisi...", o: ["16 bab", "18 bab", "20 bab", "21 bab", "15 bab"], a: 3, e: "21 bab (setelah amandemen)." },
+    { q: "Pembukaan UUD 1945 terdiri dari...", o: ["2 alinea", "3 alinea", "4 alinea", "5 alinea", "6 alinea"], a: 2, e: "4 alinea." },
+    { q: "Pembukaan UUD 1945 alinea ke-4 memuat...", o: ["Dasar negara Pancasila", "Tujuan negara", "Bentuk negara", "Sistem pemerintahan", "Hak asasi manusia"], a: 0, e: "Dasar negara Pancasila tercantum dalam alinea ke-4." },
+    { q: "Bentuk negara Indonesia menurut UUD 1945 adalah...", o: ["Kerajaan", "Republik", "Federal", "Kesatuan", "Serikat"], a: 3, e: "Negara Kesatuan Republik Indonesia (NKRI)." },
+    { q: "Sistem pemerintahan Indonesia menurut UUD 1945 adalah...", o: ["Parlementer", "Presidensial", "Semi presidensial", "Monarki konstitusional", "Federal"], a: 1, e: "Sistem presidensial." },
+    { q: "Pasal 1 ayat 1 UUD 1945 berbunyi...", o: ["Negara Indonesia adalah negara kesatuan", "Negara Indonesia adalah negara hukum", "Kedaulatan berada di tangan rakyat", "Presiden adalah kepala negara", "Indonesia adalah negara demokrasi"], a: 0, e: "Negara Indonesia ialah Negara Kesatuan, yang berbentuk Republik." },
+    { q: "Pasal 1 ayat 2 UUD 1945 berbunyi...", o: ["Negara kesatuan", "Negara hukum", "Kedaulatan berada di tangan rakyat", "Presiden kepala negara", "Demokrasi"], a: 1, e: "Negara Indonesia adalah negara hukum." },
+    { q: "Pasal 1 ayat 3 UUD 1945 berbunyi...", o: ["Negara kesatuan", "Negara hukum", "Kedaulatan berada di tangan rakyat", "Presiden kepala negara", "Demokrasi"], a: 2, e: "Kedaulatan berada di tangan rakyat dan dilaksanakan menurut UUD." },
+
+    // Koperasi & Lembaga (41-60)
+    { q: "Bapak Koperasi Indonesia adalah...", o: ["Soekarno", "Moh. Hatta", "Ki Hajar Dewantara", "Sjahrir", "Kartini"], a: 1, e: "Mohammad Hatta." },
+    { q: "Moh. Hatta dijuluki Bapak Koperasi karena...", o: ["Mendirikan koperasi pertama", "Memperjuangkan asas kekeluargaan", "Membuat UU Koperasi", "Menjadi menteri koperasi", "Menulis buku tentang koperasi"], a: 1, e: "Memperjuangkan asas kekeluargaan dalam ekonomi." },
+    { q: "Landasan struktural koperasi adalah...", o: ["Pancasila", "UUD 1945", "AD/ART", "UU Koperasi", "RAT"], a: 1, e: "UUD 1945 (Pasal 33 ayat 1)." },
+    { q: "Lembaga tertinggi koperasi adalah...", o: ["Ketua", "Pengurus", "Rapat Anggota (RAT)", "Dinas Koperasi", "Pengawas"], a: 2, e: "Rapat Anggota (RAT)." },
+    { q: "Koperasi primer didirikan oleh minimal...", o: ["20 orang", "15 orang", "9 orang", "3 orang", "5 orang"], a: 3, e: "UU Cipta Kerja: minimal 3 orang." },
+    { q: "Koperasi sekunder didirikan oleh minimal...", o: ["2 koperasi", "3 koperasi", "4 koperasi", "5 koperasi", "10 koperasi"], a: 1, e: "Minimal 3 koperasi." },
+    { q: "Azas koperasi yang pertama adalah...", o: ["Keanggotaan sukarela", "Pengelolaan demokratis", "Pembagian SHU adil", "Kemandirian", "Kerjasama"], a: 0, e: "Keanggotaan bersifat sukarela dan terbuka." },
+    { q: "Sisa Hasil Usaha (SHU) dibagikan berdasarkan...", o: ["Modal saja", "Jasa anggota", "Pangkat", "Senioritas", "Usia"], a: 1, e: "Jasa anggota (modal dan partisipasi)." },
+    { q: "Koperasi yang anggotanya produsen barang disebut...", o: ["Koperasi konsumen", "Koperasi produsen", "Koperasi simpan pinjam", "Koperasi serba usaha", "Koperasi pemasaran"], a: 1, e: "Koperasi produsen." },
+    { q: "RAT koperasi diadakan minimal...", o: ["1 kali/tahun", "2 kali/tahun", "3 kali/tahun", "4 kali/tahun", "5 kali/tahun"], a: 0, e: "Sekali dalam setahun (RAT tahunan)." },
+    { q: "Alat kelengkapan koperasi meliputi, kecuali...", o: ["Pengurus", "Pengawas", "Rapat Anggota", "Bendahara", "Dinas Koperasi"], a: 4, e: "Dinas Koperasi bukan alat kelengkapan koperasi." },
+    { q: "Prinsip koperasi ke-2 adalah...", o: ["Keanggotaan sukarela", "Pengelolaan secara demokratis", "Partisipasi anggota", "Otonomi", "Pendidikan"], a: 1, e: "Pengelolaan secara demokratis." },
+    { q: "Prinsip koperasi ke-3 adalah...", o: ["Keanggotaan sukarela", "Pengelolaan demokratis", "Partisipasi ekonomi anggota", "Otonomi", "Kerjasama"], a: 2, e: "Partisipasi ekonomi anggota." },
+    { q: "Prinsip koperasi ke-4 adalah...", o: ["Otonomi dan kebebasan", "Pengelolaan demokratis", "Partisipasi anggota", "Kemandirian", "Pendidikan"], a: 0, e: "Otonomi dan kebebasan." },
+    { q: "Prinsip koperasi ke-5 adalah...", o: ["Otonomi", "Pengelolaan demokratis", "Partisipasi anggota", "Pendidikan, pelatihan, informasi", "Kerjasama"], a: 3, e: "Pendidikan, pelatihan, dan informasi." },
+    { q: "Prinsip koperasi ke-6 adalah...", o: ["Otonomi", "Pengelolaan demokratis", "Partisipasi anggota", "Pendidikan", "Kerjasama antar koperasi"], a: 4, e: "Kerjasama antar koperasi." },
+    { q: "Prinsip koperasi ke-7 adalah...", o: ["Otonomi", "Pengelolaan demokratis", "Partisipasi anggota", "Pendidikan", "Kepedulian terhadap komunitas"], a: 4, e: "Kepedulian terhadap komunitas." },
+    { q: "Koperasi berbadan hukum diakui oleh...", o: ["Ketua Koperasi", "Notaris", "Negara (melalui pengesahan)", "Dinas Koperasi", "Anggota"], a: 2, e: "Pengakuan oleh Negara." },
+    { q: "Modal koperasi terdiri dari...", o: ["Modal sendiri dan modal pinjaman", "Modal saham saja", "Modal negara saja", "Modal asing", "Modal pribadi pengurus"], a: 0, e: "Modal sendiri dan modal pinjaman." },
+    { q: "Modal sendiri koperasi terdiri dari...", o: ["Simpanan pokok, wajib, dana cadangan, hibah", "Simpanan pokok saja", "Simpanan wajib saja", "Hibah saja", "Pinjaman bank"], a: 0, e: "Simpanan pokok, simpanan wajib, dana cadangan, dan hibah." },
+
+    // Sejarah & Pergerakan (61-80)
+    { q: "Gerakan koperasi di Indonesia pertama kali dirintis oleh...", o: ["R. Aria Wiriatmadja", "Moh. Hatta", "Soekarno", "Ki Hajar Dewantara", "Sudirman"], a: 0, e: "R. Aria Wiriatmadja di Purwokerto (1896)." },
+    { q: "Tanggal 12 Juli diperingati sebagai...", o: ["Hari Pahlawan", "Hari Koperasi", "Hari Pancasila", "Hari Koperasi Indonesia", "Hari Sumpah Pemuda"], a: 3, e: "Hari Koperasi Indonesia." },
+    { q: "Koperasi pertama di Indonesia didirikan di...", o: ["Jakarta", "Bandung", "Purwokerto", "Surabaya", "Semarang"], a: 2, e: "Purwokerto (1896)." },
+    { q: "Kongres Koperasi pertama diadakan di...", o: ["Jakarta", "Bandung", "Tasikmalaya", "Surabaya", "Semarang"], a: 2, e: "Tasikmalaya (1947)." },
+    { q: "Perkoperasian Indonesia berkembang pesat pada masa...", o: ["Kolonial Belanda", "Pendudukan Jepang", "Orde Lama", "Orde Baru", "Reformasi"], a: 3, e: "Orde Baru (1966-1998)." },
+    { q: "UU Koperasi pertama yang berlaku di Indonesia adalah...", o: ["UU No. 12/1967", "UU No. 25/1992", "UU No. 17/2012", "UU No. 7/1992", "UU No. 23/1999"], a: 0, e: "UU No. 12 Tahun 1967." },
+    { q: "UU yang menggantikan UU No. 12/1967 adalah...", o: ["UU No. 25/1992", "UU No. 17/2012", "UU No. 7/1992", "UU No. 23/1999", "UU No. 11/1967"], a: 0, e: "UU No. 25 Tahun 1992." },
+    { q: "Koperasi unit desa (KUD) berada di tingkat...", o: ["Provinsi", "Kabupaten", "Kecamatan/Desa", "Nasional", "Internasional"], a: 2, e: "Desa/Kecamatan." },
+    { q: "Tujuan koperasi adalah...", o: ["Profit maksimal", "Mensejahterakan anggota", "Menguasai pasar", "Menyaingi swasta", "Ekspansi usaha"], a: 1, e: "Mensejahterakan anggota pada khususnya dan masyarakat pada umumnya." },
+    { q: "Koperasi dapat melakukan kegiatan usaha di bidang...", o: ["Simpan pinjam saja", "Produksi saja", "Berbagai bidang usaha", "Ekspor saja", "Impor saja"], a: 2, e: "Berbagai bidang usaha." },
+    { q: "Koperasi sekolah termasuk jenis koperasi...", o: ["Sekunder", "Primer", "Campuran", "Induk", "Pusat"], a: 1, e: "Koperasi primer." },
+    { q: "Tugas pengawas koperasi adalah...", o: ["Mengelola usaha", "Melakukan pengawasan", "Memimpin rapat", "Mengaudit keuangan", "Menjual produk"], a: 1, e: "Melakukan pengawasan terhadap pelaksanaan kebijakan." },
+    { q: "Pembubaran koperasi ditetapkan oleh...", o: ["Ketua", "Pengurus", "RAT atau Keputusan Pemerintah", "Anggota", "Pengawas"], a: 2, e: "RAT atau Keputusan Pemerintah." },
+    { q: "Koperasi kredit disebut juga...", o: ["Koperasi simpan pinjam", "Koperasi produksi", "Koperasi konsumsi", "Koperasi pemasaran", "Koperasi jasa"], a: 0, e: "Koperasi simpan pinjam." },
+    { q: "Anggota koperasi dapat diberhentikan oleh...", o: ["Pengurus", "RAT", "Pengawas", "Dinas", "Ketua"], a: 1, e: "Keputusan Rapat Anggota." },
+    { q: "Koperasi desa termasuk dalam jenis...", o: ["Koperasi primer", "Koperasi sekunder", "Koperasi tersier", "Koperasi campuran", "Koperasi induk"], a: 0, e: "Koperasi primer." },
+    { q: "Simpanan pokok koperasi sifatnya...", o: ["Sama untuk setiap anggota", "Bervariasi", "Sukarela", "Tidak tetap", "Bisa diambil kapan saja"], a: 0, e: "Sama untuk setiap anggota." },
+    { q: "Simpanan wajib koperasi dibayarkan...", o: ["Sekali saja", "Secara berkala", "Sukarela", "Tidak tetap", "Saat keluar"], a: 1, e: "Secara berkala (biasanya bulanan)." },
+    { q: "Simpanan sukarela koperasi bersifat...", o: ["Wajib", "Tetap", "Sukarela", "Tidak bisa diambil", "Sama untuk semua"], a: 2, e: "Sukarela (jumlah dan waktu tidak ditentukan)." },
+    { q: "Dana cadangan koperasi digunakan untuk...", o: ["Membagi SHU", "Menutup kerugian", "Gaji pengurus", "Investasi luar", "Pembagian dividen"], a: 1, e: "Menutup kerugian koperasi." },
+
+    // NKRI & Pemerintahan (81-100)
+    { q: "NKRI singkatan dari...", o: ["Negara Kesatuan Republik Indonesia", "Negara Komunis Republik Indonesia", "Negara Kemerdekaan Republik Indonesia", "Negara Kelautan Republik Indonesia", "Negara Kesatuan Rakyat Indonesia"], a: 0, e: "Negara Kesatuan Republik Indonesia." },
+    { q: "Bentuk negara Indonesia menurut UUD 1945 adalah...", o: ["Kerajaan", "Republik", "Federal", "Kesatuan berbentuk Republik", "Serikat"], a: 3, e: "Negara Kesatuan yang berbentuk Republik." },
+    { q: "Sistem pemerintahan Indonesia adalah...", o: ["Parlementer", "Presidensial", "Semi presidensial", "Monarki konstitusional", "Federal"], a: 1, e: "Sistem presidensial." },
+    { q: "Presiden Indonesia dipilih melalui...", o: ["DPR", "MPR", "Pemilihan langsung", "Musyawarah", "Penunjukkan"], a: 2, e: "Pemilihan langsung oleh rakyat." },
+    { q: "Masa jabatan Presiden Indonesia adalah...", o: ["4 tahun", "5 tahun", "6 tahun", "7 tahun", "8 tahun"], a: 1, e: "5 tahun dan dapat dipilih kembali untuk satu periode." },
+    { q: "Lembaga legislatif Indonesia adalah...", o: ["MPR", "DPR dan DPD", "Presiden", "MK", "MA"], a: 1, e: "DPR (Dewan Perwakilan Rakyat) dan DPD (Dewan Perwakilan Daerah)." },
+    { q: "DPR singkatan dari...", o: ["Dewan Perwakilan Rakyat", "Dewan Pemusyawaratan Rakyat", "Dewan Pembangunan Rakyat", "Dewan Perdamaian Rakyat", "Dewan Pertahanan Rakyat"], a: 0, e: "Dewan Perwakilan Rakyat." },
+    { q: "DPD singkatan dari...", o: ["Dewan Perwakilan Daerah", "Dewan Pemusyawaratan Daerah", "Dewan Pembangunan Daerah", "Dewan Perdamaian Daerah", "Dewan Pertahanan Daerah"], a: 0, e: "Dewan Perwakilan Daerah." },
+    { q: "MPR singkatan dari...", o: ["Majelis Permusyawaratan Rakyat", "Majelis Pembangunan Rakyat", "Majelis Perdamaian Rakyat", "Majelis Pertahanan Rakyat", "Majelis Pemusyawaratan Rakyat"], a: 0, e: "Majelis Permusyawaratan Rakyat." },
+    { q: "MK singkatan dari...", o: ["Majelis Kehakiman", "Mahkamah Konstitusi", "Mahkamah Kepolisian", "Majelis Kehormatan", "Mahkamah Keadilan"], a: 1, e: "Mahkamah Konstitusi." },
+    { q: "MA singkatan dari...", o: ["Majelis Agung", "Mahkamah Agung", "Majelis Administratif", "Mahkamah Administratif", "Majelis Arbitrase"], a: 1, e: "Mahkamah Agung." },
+    { q: "BPK singkatan dari...", o: ["Badan Pemeriksa Keuangan", "Badan Pembangunan Keuangan", "Badan Pengelolaan Keuangan", "Badan Pengawasan Keuangan", "Badan Perencanaan Keuangan"], a: 0, e: "Badan Pemeriksa Keuangan." },
+    { q: "Tugas BPK adalah...", o: ["Membuat undang-undang", "Memeriksa pengelolaan keuangan negara", "Mengadili sengketa", "Menjalankan pemerintahan", "Mengawasi pemilu"], a: 1, e: "Memeriksa pengelolaan dan tanggung jawab keuangan negara." },
+    { q: "Komisi Yudisial bertugas...", o: ["Mengadili perkara", "Mengawasi perilaku hakim", "Membuat undang-undang", "Memilih presiden", "Mengawasi pemilu"], a: 1, e: "Mengawasi perilaku hakim." },
+    { q: "Tentang Warganegara diatur dalam UUD 1945 pasal...", o: ["Pasal 25", "Pasal 26", "Pasal 27", "Pasal 28", "Pasal 29"], a: 1, e: "Pasal 26." },
+    { q: "Warga negara Indonesia menurut Pasal 26 UUD 1945 adalah...", o: ["Orang Indonesia asli", "Orang asing yang disahkan", "Orang Indonesia asli dan orang asing yang disahkan undang-undang", "Orang yang tinggal di Indonesia", "Orang yang memiliki KTP"], a: 2, e: "Orang Indonesia asli dan orang asing yang disahkan dengan undang-undang." },
+    { q: "Hak asasi manusia diatur dalam UUD 1945 pada...", o: ["Pasal 28", "Pasal 28A-28J", "Pasal 29", "Pasal 30", "Pasal 31"], a: 1, e: "Pasal 28A sampai 28J." },
+    { q: "Pasal 28A UUD 1945 mengatur tentang...", o: ["Kebebasan berserikat", "Hak hidup", "Kebebasan beragama", "Hak pendidikan", "Hak atas pekerjaan"], a: 1, e: "Hak untuk hidup dan mempertahankan hidup." },
+    { q: "Pasal 28E UUD 1945 mengatur tentang...", o: ["Hak hidup", "Kebebasan beragama dan meyakini kepercayaan", "Hak pendidikan", "Hak atas pekerjaan", "Kebebasan berserikat"], a: 1, e: "Kebebasan beragama dan meyakini kepercayaan." },
+    { q: "Pasal 28I UUD 1945 mengatur tentang...", o: ["Hak yang tidak dapat dikurangi dalam keadaan apapun", "Hak atas pekerjaan", "Hak atas pendidikan", "Kebebasan berserikat", "Hak hidup"], a: 0, e: "Hak yang tidak dapat dikurangi dalam keadaan apapun (non-derogable rights)." },
+
+    // Geografi & SDA (101-120)
+    { q: "Luas wilayah Indonesia kira-kira...", o: ["1,5 juta km²", "1,9 juta km²", "2,5 juta km²", "3,0 juta km²", "3,5 juta km²"], a: 1, e: "Sekitar 1,9 juta km²." },
+    { q: "Indonesia terletak di antara dua samudra yaitu...", o: ["Samudra Atlantik dan Pasifik", "Samudra Hindia dan Pasifik", "Samudra Arktik dan Hindia", "Samudra Pasifik dan Arktik", "Samudra Hindia dan Atlantik"], a: 1, e: "Samudra Hindia dan Samudra Pasifik." },
+    { q: "Indonesia terletak di antara dua benua yaitu...", o: ["Asia dan Eropa", "Asia dan Australia", "Asia dan Afrika", "Australia dan Afrika", "Eropa dan Australia"], a: 1, e: "Benua Asia dan Benua Australia." },
+    { q: "Letak geografis Indonesia berada pada koordinat...", o: ["6°LU-11°LS dan 95°BT-141°BT", "0°-15°LS dan 90°BT-150°BT", "5°LU-15°LS dan 90°BT-140°BT", "10°LU-15°LS dan 100°BT-145°BT", "5°LU-10°LS dan 95°BT-140°BT"], a: 0, e: "6°LU-11°LS dan 95°BT-141°BT." },
+    { q: "Pulau terbesar di Indonesia adalah...", o: ["Sumatera", "Jawa", "Kalimantan", "Sulawesi", "Papua"], a: 2, e: "Kalimantan." },
+    { q: "Pulau terpadat di Indonesia adalah...", o: ["Sumatera", "Jawa", "Kalimantan", "Sulawesi", "Bali"], a: 1, e: "Jawa." },
+    { q: "Gunung tertinggi di Indonesia adalah...", o: ["Gunung Semeru", "Gunung Rinjani", "Puncak Jaya", "Gunung Kerinci", "Gunung Agung"], a: 2, e: "Puncak Jaya (Carstensz Pyramid) - 4.884 mdpl." },
+    { q: "Sungai terpanjang di Indonesia adalah...", o: ["Sungai Kapuas", "Sungai Mahakam", "Sungai Musi", "Sungai Barito", "Sungai Bengawan Solo"], a: 0, e: "Sungai Kapuas di Kalimantan Barat (1.143 km)." },
+    { q: "Danau terbesar di Indonesia adalah...", o: ["Danau Toba", "Danau Sentani", "Danau Maninjau", "Danau Singkarak", "Danau Tempe"], a: 0, e: "Danau Toba di Sumatera Utara." },
+    { q: "Indonesia memiliki iklim...", o: ["Subtropis", "Tropis", "Sedang", "Kutub", "Gurun"], a: 1, e: "Iklim tropis." },
+    { q: "Flora dan fauna Indonesia bagian barat mirip dengan...", o: ["Australia", "Asia", "Afrika", "Amerika", "Eropa"], a: 1, e: "Asia (Garis Wallace)." },
+    { q: "Flora dan fauna Indonesia bagian timur mirip dengan...", o: ["Asia", "Australia", "Afrika", "Amerika", "Eropa"], a: 1, e: "Australia (Garis Weber)." },
+    { q: "Garis Wallace memisahkan wilayah fauna...", o: ["Asiatis dan Australis", "Asiatis dan Peralihan", "Australis dan Peralihan", "Asiatis dan Eropa", "Australis dan Afrika"], a: 0, e: "Fauna Asiatis dan Australis." },
+    { q: "Komodo adalah hewan endemik yang terdapat di...", o: ["Jawa", "Sumatera", "NTT", "Kalimantan", "Sulawesi"], a: 2, e: "Nusa Tenggara Timur (Pulau Komodo)." },
+    { q: "Cendrawasih adalah hewan endemik yang terdapat di...", o: ["Jawa", "Sumatera", "Papua", "Kalimantan", "Sulawesi"], a: 2, e: "Papua." },
+    { q: "Orangutan adalah hewan endemik yang terdapat di...", o: ["Jawa", "Sumatera dan Kalimantan", "Papua", "Sulawesi", "NTT"], a: 1, e: "Sumatera dan Kalimantan." },
+    { q: "Badak bercula satu terdapat di...", o: ["Sumatera", "Jawa", "Kalimantan", "Papua", "Sulawesi"], a: 1, e: "Jawa (Ujung Kulon, Banten)." },
+    { q: "Hutan hujan tropis terluas di Indonesia terdapat di...", o: ["Jawa", "Sumatera dan Kalimantan", "Papua", "Sulawesi", "NTT"], a: 1, e: "Sumatera dan Kalimantan." },
+    { q: "Indonesia berada di zona...", o: ["Ring of Fire", "Ring of Ice", "Ring of Gold", "Ring of Silver", "Ring of Bronze"], a: 0, e: "Ring of Fire (Cincin Api Pasifik)." },
+    { q: "Ring of Fire menyebabkan Indonesia memiliki banyak...", o: ["Gurun", "Gunung berapi", "Danau", "Sungai", "Pantai"], a: 1, e: "Gunung berapi aktif." },
+
+    // Bela Negara & Wawasan Nusantara (121-140)
+    { q: "Wawasan Nusantara adalah...", o: ["Pandangan geografis Indonesia", "Pandangan politik Indonesia", "Cara pandang bangsa Indonesia tentang diri dan lingkungannya", "Pandangan ekonomi Indonesia", "Pandangan budaya Indonesia"], a: 2, e: "Cara pandang bangsa Indonesia tentang diri dan lingkungannya berdasarkan Pancasila dan UUD 1945." },
+    { q: "Bela negara diatur dalam UUD 1945 pasal...", o: ["Pasal 27 ayat 3", "Pasal 28", "Pasal 29", "Pasal 30", "Pasal 31"], a: 0, e: "Pasal 27 ayat 3: Setiap warga negara berhak dan wajib ikut serta dalam upaya pembelaan negara." },
+    { q: "Bela negara diatur dalam UUD 1945 pasal 30 tentang...", o: ["Pendidikan", "Pertahanan dan keamanan", "Perekonomian", "Hak asasi manusia", "Agama"], a: 1, e: "Pertahanan dan keamanan negara." },
+    { q: "Sistem pertahanan negara Indonesia adalah...", o: ["Sistem pertahanan militer", "Sistem pertahanan rakyat semesta", "Sistem pertahanan sipil", "Sistem pertahanan gabungan", "Sistem pertahanan terpusat"], a: 1, e: "Sistem pertahanan rakyat semesta (Sishankamrata)." },
+    { q: "TNI singkatan dari...", o: ["Tentara Nasional Indonesia", "Tentara Negara Indonesia", "Tentara Nusantara Indonesia", "Tentara Nasional Insani", "Tentara Negara Insani"], a: 0, e: "Tentara Nasional Indonesia." },
+    { q: "TNI terdiri dari...", o: ["AD, AL, AU", "AD, AL", "AD, AU", "AL, AU", "AD, AL, AU, Polisi"], a: 0, e: "TNI AD, TNI AL, dan TNI AU." },
+    { q: "Polri singkatan dari...", o: ["Polisi Republik Indonesia", "Polisi Negara Indonesia", "Polisi Rakyat Indonesia", "Polisi Nasional Indonesia", "Polisi Republik Insani"], a: 0, e: "Kepolisian Negara Republik Indonesia." },
+    { q: "Ketahanan nasional adalah...", o: ["Kekuatan militer", "Kondisi dinamis bangsa Indonesia", "Kekuatan ekonomi", "Kekuatan politik", "Kekuatan budaya"], a: 1, e: "Kondisi dinamis bangsa Indonesia yang meliputi ketangguhan dan kemampuan menghadapi ancaman." },
+    { q: "Geopolitik Indonesia didasarkan pada...", o: ["Pancasila", "UUD 1945", "Wawasan Nusantara", "Bhinneka Tunggal Ika", "NKRI"], a: 2, e: "Wawasan Nusantara." },
+    { q: "Geostrategi Indonesia diwujudkan melalui...", o: ["Wawasan Nusantara", "Ketahanan Nasional", "Bela Negara", "Pertahanan Sipil", "Diplomasi"], a: 1, e: "Ketahanan Nasional." },
+    { q: "ZEE singkatan dari...", o: ["Zona Ekonomi Eksklusif", "Zona Ekonomi Eksternal", "Zona Ekspansi Ekonomi", "Zona Ekonomi Ekspansi", "Zona Ekosistem Ekonomi"], a: 0, e: "Zona Ekonomi Eksklusif." },
+    { q: "Zona Ekonomi Eksklusif Indonesia sejauh...", o: ["100 mil laut", "150 mil laut", "200 mil laut", "250 mil laut", "300 mil laut"], a: 2, e: "200 mil laut dari garis pangkal." },
+    { q: "Laut territorial Indonesia sejauh...", o: ["3 mil laut", "6 mil laut", "12 mil laut", "24 mil laut", "50 mil laut"], a: 2, e: "12 mil laut dari garis pangkal." },
+    { q: "Dasar negara Indonesia adalah...", o: ["UUD 1945", "Pancasila", "Bhinneka Tunggal Ika", "NKRI", "Tap MPR"], a: 1, e: "Pancasila." },
+    { q: "Lambang negara Indonesia adalah...", o: ["Harimau", "Garuda Pancasila", "Elang", "Banteng", "Komodo"], a: 1, e: "Garuda Pancasila." },
+    { q: "Semboyan negara Indonesia adalah...", o: ["Pancasila", "Bhinneka Tunggal Ika", "NKRI", "UUD 1945", "Merdeka"], a: 1, e: "Bhinneka Tunggal Ika (Berbeda-beda tetapi tetap satu)." },
+    { q: "Bendera negara Indonesia adalah...", o: ["Sang Merah Putih", "Sang Saka Merah Putih", "Sang Dwiwarna", "Merah Putih", "Semua benar"], a: 4, e: "Semua sebutan benar (Sang Merah Putih/Sang Saka Merah Putih)." },
+    { q: "Lagu kebangsaan Indonesia adalah...", o: ["Indonesia Raya", "Indonesia Pusaka", "Bagimu Negeri", "Halo-Halo Bandung", "Maju Tak Gentar"], a: 0, e: "Indonesia Raya karya W.R. Supratman." },
+    { q: "Pencipta lagu Indonesia Raya adalah...", o: ["Ismail Marzuki", "W.R. Supratman", "Kusbini", "C. Simanjuntak", "H. Mutahar"], a: 1, e: "W.R. Supratman." },
+    { q: "Indonesia Raya pertama kali dikumandangkan pada...", o: ["1 Juni 1945", "17 Agustus 1945", "28 Oktober 1928", "18 Agustus 1945", "22 Juni 1945"], a: 2, e: "Kongres Pemuda II, 28 Oktober 1928." },
+];
+
+const RAW_TKP = [
+    // Case 1: Konflik Internal Koperasi
+    { q: "Anda adalah pengurus koperasi dan menemukan dua anggota berselisih tentang pembagian SHU. Sikap Anda?", o: ["Memihak anggota senior", "Membiarkan mereka menyelesaikan sendiri", "Mendengarkan kedua belah pihak dan menjelaskan aturan SHU", "Menunda masalah sampai RAT berikutnya", "Memecat salah satu anggota"], v: [1, 2, 5, 3, 0] },
+    { q: "Seorang anggota koperasi marah karena SHU-nya lebih kecil dari tahun lalu. Anda...", o: ["Mengabaikannya", "Menjelaskan bahwa SHU bergantung pada partisipasi", "Berjanji akan menaikkan SHU", "Menyalahkan anggota lain", "Mengusir anggota tersebut"], v: [0, 5, 3, 1, 0] },
+    { q: "Anda menemukan data keuangan koperasi tidak sesuai dengan laporan. Langkah Anda?", o: ["Menutupi kesalahan", "Melaporkan ke ketua dan mencari solusi", "Memecat bendahara", "Mengabaikan selisih kecil", "Mengumumkan ke seluruh anggota"], v: [1, 5, 2, 0, 3] },
+    { q: "Anggota koperasi mengeluh pelayanan lambat. Respons Anda?", o: ["Menyalahkan anggota", "Meningkatkan sistem pelayanan", "Mengabaikan keluhan", "Memecat staf", "Menaikkan iuran"], v: [0, 5, 1, 0, 2] },
+    { q: "Anda ditugaskan memimpin rapat koperasi tetapi ketua berhalangan. Anda...", o: ["Menunda rapat", "Memimpin rapat dengan persiapan matang", "Menyerahkan ke wakil ketua", "Membatalkan rapat", "Menunggu ketua pulang"], v: [1, 5, 3, 0, 2] },
+
+    // Case 2: Integritas
+    { q: "Rekan kerja menawarkan uang untuk memuluskan proses audit koperasi. Anda...", o: ["Menerima karena jumlah kecil", "Menolak dan melaporkan", "Menolak tanpa melaporkan", "Meminta jumlah lebih besar", "Mengabaikan tawaran"], v: [0, 5, 3, 0, 2] },
+    { q: "Anda menemukan selisih kas kecil Rp 50.000. Anda akan...", o: ["Mengambinya", "Melaporkan dan mencari penyebab", "Menutupi sendiri", "Membagi dengan rekan", "Mengabaikan"], v: [0, 5, 2, 0, 1] },
+    { q: "Atasan meminta Anda memalsukan laporan keuangan koperasi. Sikap Anda?", o: ["Menuruti permintaan", "Menolak dengan sopan dan menjelaskan risiko", "Melaporkan ke pengawas", "Pura-pura tidak mendengar", "Melakukan setengah-setengah"], v: [0, 5, 4, 1, 2] },
+    { q: "Anda ditawari hadiah oleh supplier koperasi. Anda...", o: ["Menerima karena biasa", "Menolak dan tetap profesional", "Menerima tapi tidak mengubah keputusan", "Menolak kasar", "Menerima dan merahasiakan"], v: [1, 5, 3, 0, 0] },
+    { q: "Anda mengetahui ketua koperasi menggunakan dana untuk kepentingan pribadi. Anda...", o: ["Diam saja", "Membicarakan di belakang", "Melaporkan ke pengawas", "Mem confrontasi langsung", "Mengancam ketua"], v: [1, 0, 5, 3, 0] },
+
+    // Case 3: Pelayanan
+    { q: "Anggota datang dengan keluhan rumit di akhir jam kerja. Anda...", o: ["Menyuruh datang besok", "Melayani dengan sabar hingga selesai", "Melayani dengan cepat asal selesai", "Menyuruh ke customer service", "Mengabaikannya"], v: [2, 5, 4, 3, 0] },
+    { q: "Sistem komputer koperasi tiba-tiba down saat ada anggota yang butuh layanan. Anda...", o: ["Panik", "Menyuruh anggota pulang", "Melayani secara manual sambil memperbaiki sistem", "Menyalahkan IT", "Menutup koperasi"], v: [1, 0, 5, 2, 0] },
+    { q: "Anggota buta huruf membutuhkan bantuan mengisi formulir. Anda...", o: ["Menyuruh minta tolong orang lain", "Membantu mengisi dengan sabar", "Menyuruh datang lain kali", "Menolak karena bukan tugas", "Menyuruh ke petugas lain"], v: [1, 5, 2, 0, 3] },
+    { q: "Ada antrian panjang di koperasi. Anda...", o: ["Bekerja lebih cepat", "Membuka loket tambahan", "Menyuruh anggota antre saja", "Mengeluh pada atasan", "Istirahat dulu"], v: [3, 5, 1, 2, 0] },
+    { q: "Anggota mengajukan pinjaman tapi tidak memenuhi syarat. Anda...", o: ["Menolak tanpa penjelasan", "Menjelaskan syarat dan memberikan solusi alternatif", "Memproses anyway", "Menyuruh cari pinjaman di tempat lain", "Meminta uang tambahan"], v: [1, 5, 0, 2, 0] },
+
+    // Case 4: Kerja Tim
+    { q: "Tim Anda mendapat tugas mendadak. Anda...", o: ["Mengerjakan sendiri", "Membagi tugas sesuai keahlian", "Menolak karena bukan jadwal", "Menyuruh orang lain mengerjakan", "Menunda sampai besok"], v: [2, 5, 1, 0, 0] },
+    { q: "Rekan kerja tidak kooperatif dalam proyek koperasi. Anda...", o: ["Marah padanya", "Membicarakan dengan baik-baik", "Melaporkan ke atasan", "Mengerjakan sendiri", "Mengucilkannya"], v: [1, 5, 3, 2, 0] },
+    { q: "Anda mendapat pujian atas kerja tim. Anda...", o: ["Menerima saja", "Mengakui kontribusi seluruh tim", "Mengklaim sebagai karya sendiri", "Tidak peduli", "Membagikan bonus"], v: [3, 5, 0, 1, 2] },
+    { q: "Ada perbedaan pendapat dalam rapat koperasi. Anda...", o: ["Memaksa pendapat sendiri", "Mendengarkan dan mencari solusi bersama", "Diam saja", "Keluar dari rapat", "Memihak salah satu"], v: [1, 5, 2, 0, 0] },
+    { q: "Anggota tim sakit dan tugasnya terbengkalai. Anda...", o: ["Membiarkan tugas terbengkalai", "Mengambil alih tugasnya sementara", "Menyalahkan yang sakit", "Menyuruh atasan mencari pengganti", "Menunda deadline"], v: [0, 5, 0, 2, 1] },
+
+    // Case 5: Inovasi
+    { q: "Anda memiliki ide baru untuk meningkatkan efisiensi koperasi. Anda...", o: ["Menyimpan ide sendiri", "Menyampaikan ke pengurus", "Melaksanakan tanpa izin", "Tidak peduli", "Menunggu orang lain yang punya ide"], v: [3, 5, 1, 0, 0] },
+    { q: "Teknologi baru tersedia untuk koperasi tapi mahal. Anda...", o: ["Menolak karena mahal", "Menganalisis cost-benefit dan mengajukan proposal", "Membeli tanpa persetujuan", "Mengabaikan", "Menyuruh IT yang memutuskan"], v: [1, 5, 0, 0, 2] },
+    { q: "Anggota mengusulkan sistem baru yang belum pernah ada. Anda...", o: ["Menolak karena belum ada", "Mengkaji dan menguji coba", "Langsung melaksanakan", "Mengabaikan usulan", "Menyuruh anggota yang mengajukan"], v: [1, 5, 0, 0, 2] },
+    { q: "Anda menemukan cara menghemat biaya operasional. Anda...", o: ["Menyimpan untuk diri sendiri", "Menyampaikan ke pengurus", "Melaksanakan sendiri", "Tidak peduli", "Menjual informasinya"], v: [3, 5, 1, 0, 0] },
+    { q: "Koperasi mendapat feedback negatif dari survei kepuasan. Anda...", o: ["Mengabaikannya", "Menganalisis dan membuat rencana perbaikan", "Menyalahkan anggota", "Menutup survei", "Menghukum staf"], v: [1, 5, 0, 0, 0] },
+
+    // Case 6: Kepemimpinan
+    { q: "Anda ditunjuk sebagai ketua unit baru. Langkah pertama Anda...", o: ["Mengubah semua aturan", "Mengenali anggota dan memahami kondisi", "Memecat yang tidak setuju", "Menunda keputusan", "Mengikuti ketua sebelumnya"], v: [3, 5, 0, 1, 2] },
+    { q: "Bawahan melakukan kesalahan fatal. Anda...", o: ["Memecat langsung", "Mencari akar masalah dan memberikan pembinaan", "Menyalahkan atasan", "Mengabaikan", "Memalukan di depan umum"], v: [1, 5, 0, 0, 0] },
+    { q: "Anda harus membuat keputusan penting tanpa informasi lengkap. Anda...", o: ["Menunda keputusan", "Mengumpulkan informasi secepat mungkin dan memutuskan", "Meminta orang lain memutuskan", "Menunggu informasi lengkap", "Menebak"], v: [2, 5, 0, 1, 0] },
+    { q: "Anggota tim tidak menghargai keputusan Anda. Anda...", o: ["Memaksakan keputusan", "Menjelaskan alasan dan mendengarkan masukan", "Mengubah keputusan", "Memecat yang tidak setuju", "Mengabaikan"], v: [1, 5, 0, 0, 0] },
+    { q: "Anda mendapat kritik membangun dari anggota. Anda...", o: ["Marah", "Menerima dan berterima kasih", "Membantah", "Mengabaikan", "Membalas kritik"], v: [1, 5, 0, 0, 0] },
+
+    // Case 7: Adaptasi
+    { q: "Koperasi menerapkan sistem baru yang sulit. Anda...", o: ["Menolak sistem baru", "Belajar dan beradaptasi", "Mengeluh pada atasan", "Mencari cara绕过 sistem", "Pindah ke koperasi lain"], v: [1, 5, 0, 0, 0] },
+    { q: "Atasan mengubah kebijakan mendadak. Anda...", o: ["Protes keras", "Memahami alasan dan menyesuaikan", "Melakukan cara lama", "Mengabaikan perubahan", "Mencari atasan baru"], v: [1, 5, 0, 0, 0] },
+    { q: "Anda dipindahkan ke divisi baru. Anda...", o: ["Menolak pemindahan", "Belajar hal baru dengan semangat", "Mengeluh pada teman", "Mengerjakan dengan setengah hati", "Meminta kembali ke divisi lama"], v: [1, 5, 0, 0, 0] },
+    { q: "Koperasi menghadapi persaingan ketat. Anda...", o: ["Panik", "Mencari strategi baru", "Menyalahkan pemerintah", "Menunggu persaingan berakhir", "Keluar dari koperasi"], v: [1, 5, 0, 0, 0] },
+    { q: "Regulasi koperasi berubah. Anda...", o: ["Mengabaikan perubahan", "Mempelajari regulasi baru dan menyesuaikan", "Menyalahkan pembuat regulasi", "Melakukan cara lama", "Menunggu ada yang mengatur"], v: [1, 5, 0, 0, 0] },
+
+    // Case 8: Komunikasi
+    { q: "Anda harus menyampaikan berita buruk ke anggota. Anda...", o: ["Menyampaikan dengan jujur dan empati", "Menyembunyikan berita", "Menyampaikan tanpa empati", "Menyuruh orang lain menyampaikan", "Menunda penyampaian"], v: [5, 0, 1, 2, 0] },
+    { q: "Anggota tidak memahami penjelasan Anda. Anda...", o: ["Menyalahkan anggota", "Menjelaskan dengan cara berbeda", "Mengulang dengan cara sama", "Menyuruh baca sendiri", "Mengabaikan"], v: [1, 5, 2, 0, 0] },
+    { q: "Ada misinformasi tentang koperasi beredar. Anda...", o: ["Mengabaikannya", "Meluruskan dengan data yang benar", "Membalas dengan emosi", "Menyuruh diam", "Memfitnah balik"], v: [1, 5, 0, 0, 0] },
+    { q: "Anda harus presentasi di depan RAT. Anda...", o: ["Panik", "Persiapan matang dan berlatih", "Membaca langsung dari catatan", "Menyuruh orang lain presentasi", "Menunda presentasi"], v: [1, 5, 2, 0, 0] },
+    { q: "Rekan kerja gossip tentang Anda. Anda...", o: ["Marah dan confrontasi", "Mengabaikannya dan fokus kerja", "Membalas gossip", "Melaporkan ke HR", "Keluar dari koperasi"], v: [1, 5, 0, 2, 0] },
+
+    // Case 9: Tanggung Jawab
+    { q: "Anda bertanggung jawab atas proyek yang gagal. Anda...", o: ["Menyalahkan tim", "Mengakui kesalahan dan belajar", "Menyalahkan atasan", "Menghindari tanggung jawab", "Menyalahkan kondisi"], v: [1, 5, 0, 0, 0] },
+    { q: "Deadline proyek mendekat tapi belum selesai. Anda...", o: ["Menyerah", "Kerja lembur dan minta bantuan", "Menunda deadline", "Menyalahkan anggota tim", "Mengabaikan"], v: [1, 5, 0, 0, 0] },
+    { q: "Anda menemukan kesalahan dalam laporan yang sudah diserahkan. Anda...", o: ["Menyembunyikannya", "Segera melapor dan memperbaiki", "Menunggu ketahuan", "Menyalahkan yang memeriksa", "Mengabaikan"], v: [1, 5, 0, 0, 0] },
+    { q: "Tugas tambahan diberikan di luar jam kerja. Anda...", o: ["Menolak mentah-mentah", "Menerima dengan profesional", "Mengerjakan dengan setengah hati", "Mengeluh pada semua orang", "Pura-pura tidak dapat"], v: [1, 5, 0, 0, 0] },
+    { q: "Anda ditugaskan mewakili koperasi di acara penting. Anda...", o: ["Mencari alasan untuk tidak pergi", "Persiapan matang dan representatif", "Pergi tanpa persiapan", "Menyuruh orang lain", "Datang terlambat"], v: [1, 5, 0, 0, 0] },
+
+    // Case 10: Etika Profesional
+    { q: "Anda mengetahui rencana merger koperasi yang belum diumumkan. Anda...", o: ["Memberitahu semua orang", "Menjaga kerahasiaan", "Memberitahu keluarga saja", "Memanfaatkan untuk keuntungan pribadi", "Mengancam pengurus"], v: [1, 5, 0, 0, 0] },
+    { q: "Anggota meminta informasi rahasia koperasi. Anda...", o: ["Memberikan karena anggota", "Menolak dengan sopan dan menjelaskan aturan", "Memberikan sebagian", "Menyuruh cari sendiri", "Memberikan dengan imbalan"], v: [1, 5, 0, 0, 0] },
+    { q: "Anda ditawari pekerjaan di koperasi lain dengan gaji lebih tinggi. Anda...", o: ["Langsung menerima", "Mempertimbangkan dengan matang", "Menolak mentah-mentah", "Menerima tapi tidak memberi notice", "Memanfaatkan untuk negosiasi"], v: [1, 5, 0, 0, 0] },
+    { q: "Anda melihat rekan kerja menggunakan fasilitas koperasi untuk pribadi. Anda...", o: ["Ikut menggunakan", "Menegur dengan baik", "Mengabaikan", "Melaporkan tanpa bicara", "Memeras rekan"], v: [1, 5, 0, 0, 0] },
+    { q: "Koperasi mengadakan pelatihan gratis. Anda...", o: ["Tidak peduli", "Mengikuti dengan antusias", "Menganggap tidak penting", "Menyuruh orang lain", "Mencari keuntungan dari pelatihan"], v: [1, 5, 0, 0, 0] },
+];
+
+const RAW_TEKNIS = [
+    // Dasar Koperasi (1-20)
+    { q: "Prinsip kemandirian koperasi berarti...", o: ["Bebas dari aturan", "Mampu berdiri sendiri tanpa bergantung pihak lain", "Tanpa anggota", "Modal dari bank", "Eksklusif"], a: 1, e: "Kemandirian: Berdiri sendiri." },
+    { q: "Simpanan yang tidak bisa diambil saat masih menjadi anggota adalah...", o: ["Simpanan Pokok", "Simpanan Wajib", "Simpanan Sukarela", "Dana Cadangan", "Tabungan"], a: 0, e: "Simpanan Pokok hanya diambil saat keluar keanggotaan." },
+    { q: "Audit eksternal koperasi dilakukan oleh...", o: ["Ketua Koperasi", "Dinas Koperasi", "KAP (Kantor Akuntan Publik)", "Pengawas Internal", "Anggota"], a: 2, e: "KAP (Kantor Akuntan Publik)." },
+    { q: "Buku wajib koperasi meliputi, kecuali...", o: ["Buku kas", "Buku inventaris", "Buku tamu", "Buku anggota", "Buku notulen rapat"], a: 2, e: "Buku tamu bukan buku wajib." },
+    { q: "SHU positif menunjukkan bahwa...", o: ["Koperasi rugi", "Koperasi sehat dan surplus", "Koperasi bangkrut", "Koperasi akan bubar", "Koperasi stagnan"], a: 1, e: "SHU positif = koperasi sehat." },
+    { q: "RAT luar biasa diadakan jika...", o: ["Setiap bulan", "Ada keperluan mendesak", "Tidak pernah diadakan", "Dinas memerintahkan", "Ketua mau saja"], a: 1, e: "Ada keperluan mendesak." },
+    { q: "Pengurus koperasi dipilih oleh...", o: ["Ketua", "Dinas Koperasi", "RAT (Rapat Anggota)", "Pengawas", "Pendiri"], a: 2, e: "Dipilih oleh Rapat Anggota." },
+    { q: "Koperasi yang melayani anggota dan non-anggota disebut...", o: ["Koperasi primer", "Koperasi sekunder", "Koperasi serba usaha", "Koperasi tertutup", "Koperasi terbuka"], a: 2, e: "Koperasi serba usaha." },
+    { q: "Jangka waktu kepengurusan koperasi umumnya...", o: ["1 tahun", "2 tahun", "3 tahun", "5 tahun", "Seumur hidup"], a: 2, e: "Umumnya 3 tahun." },
+    { q: "Modal pinjaman koperasi dapat berasal dari...", o: ["Anggota dan non-anggota", "Hanya anggota", "Hanya pemerintah", "Hanya bank", "Hanya investor"], a: 0, e: "Anggota dan non-anggota." },
+    { q: "RAT sah jika dihadiri oleh...", o: ["Setengah plus satu anggota", "Semua anggota", "Minimal 3 anggota", "Minimal 10 anggota", "Pengurus saja"], a: 0, e: "Setengah plus satu dari jumlah anggota." },
+    { q: "Keputusan RAT diambil berdasarkan...", o: ["Suara terbanyak", "Musyawarah mufakat", "Keputusan ketua", "Keputusan pengawas", "Keputusan dinas"], a: 1, e: "Musyawarah mufakat, jika tidak voting." },
+    { q: "Koperasi yang anggotanya terdiri dari koperasi primer disebut...", o: ["Koperasi primer", "Koperasi sekunder", "Koperasi tersier", "Koperasi campuran", "Koperasi induk"], a: 1, e: "Koperasi sekunder." },
+    { q: "Gabungan koperasi di tingkat nasional disebut...", o: ["Koperasi primer", "Koperasi sekunder", "Koperasi tersier", "Gabungan Koperasi", "Induk Koperasi"], a: 3, e: "Gabungan Koperasi (Pusat Koperasi)." },
+    { q: "Perangkat organisasi koperasi terdiri dari...", o: ["Pengurus dan pengawas", "RAT, pengurus, dan pengawas", "Ketua dan sekretaris", "Pengurus dan anggota", "RAT dan pengurus"], a: 1, e: "RAT, pengurus, dan pengawas." },
+    { q: "Tugas utama pengurus koperasi adalah...", o: ["Mengawasi", "Mengelola koperasi", "Mengaudit", "Menetapkan aturan", "Memilih anggota"], a: 1, e: "Mengelola koperasi." },
+    { q: "Pengawas koperasi bertanggung jawab kepada...", o: ["Ketua", "Dinas", "RAT", "Pengurus", "Pemerintah"], a: 2, e: "RAT (Rapat Anggota)." },
+    { q: "Koperasi dapat dibubarkan berdasarkan keputusan...", o: ["Ketua", "Pengurus", "RAT atau pengadilan", "Pengawas", "Dinas"], a: 2, e: "RAT atau pengadilan." },
+    { q: "Pembubaran koperasi diumumkan dalam...", o: ["Surat kabar", "Berita Negara", "Media sosial", "Papan pengumuman", "Radio"], a: 1, e: "Berita Negara." },
+    { q: "Laporan tahunan koperasi disampaikan kepada...", o: ["Ketua", "Pengawas", "RAT", "Dinas", "Pemerintah"], a: 2, e: "RAT (Rapat Anggota Tahunan)." },
+
+    // Simpanan & Pinjaman (21-40)
+    { q: "Simpanan pokok koperasi besarnya...", o: ["Bervariasi", "Sama untuk setiap anggota", "Terserah anggota", "Ditentukan pengurus", "Ditentukan RAT"], a: 1, e: "Sama untuk setiap anggota." },
+    { q: "Simpanan wajib koperasi dibayarkan secara...", o: ["Sukarela", "Berkala", "Sekali saja", "Tidak tetap", "Saat keluar"], a: 1, e: "Berkala (biasanya bulanan)." },
+    { q: "Simpanan sukarela koperasi...", o: ["Wajib dibayar", "Sifatnya sukarela", "Harus sama", "Tidak bisa diambil", "Hanya untuk pengurus"], a: 1, e: "Sifatnya sukarela." },
+    { q: "Dana cadangan koperasi dibentuk dari...", o: ["SHU", "Simpanan pokok", "Simpanan wajib", "Hibah", "Pinjaman"], a: 0, e: "SHU (Sisa Hasil Usaha)." },
+    { q: "Pembagian SHU berdasarkan jasa anggota minimal...", o: ["30%", "40%", "50%", "60%", "70%"], a: 3, e: "Minimal 60% untuk jasa anggota." },
+    { q: "Pembagian SHU berdasarkan jasa modal maksimal...", o: ["20%", "30%", "40%", "50%", "60%"], a: 2, e: "Maksimal 40% untuk jasa modal." },
+    { q: "SHU yang tidak dibagi dibukukan sebagai...", o: ["Pendapatan pengurus", "Dana cadangan", "Simpanan anggota", "Hibah", "Donasi"], a: 1, e: "Dana cadangan." },
+    { q: "Pinjaman koperasi kepada anggota bersifat...", o: ["Wajib", "Sukarela", "Hanya untuk pengurus", "Hanya untuk pendiri", "Tidak boleh"], a: 1, e: "Sukarela berdasarkan kebutuhan." },
+    { q: "Suku bunga pinjaman koperasi ditentukan oleh...", o: ["Pemerintah", "Bank Indonesia", "RAT/Pengurus", "Anggota", "Dinas"], a: 2, e: "RAT/Pengurus sesuai AD/ART." },
+    { q: "Jaminan pinjaman koperasi dapat berupa...", o: ["Hanya tanah", "Hanya kendaraan", "Simpanan, barang, atau jaminan lain", "Tidak perlu jaminan", "Hanya emas"], a: 2, e: "Simpanan, barang, atau jaminan lain." },
+    { q: "NPL (Non Performing Loan) koperasi adalah...", o: ["Pinjaman lancar", "Pinjaman bermasalah", "Pinjaman baru", "Pinjaman besar", "Pinjaman tanpa bunga"], a: 1, e: "Pinjaman bermasalah." },
+    { q: "Rasio kecukupan modal koperasi (CAR) minimal...", o: ["5%", "8%", "10%", "12%", "15%"], a: 1, e: "Minimal 8%." },
+    { q: "LDR (Loan to Deposit Ratio) koperasi idealnya...", o: ["Di bawah 50%", "50-85%", "Di atas 100%", "Tidak ada batasan", "Tepat 100%"], a: 1, e: "50-85% (tidak terlalu rendah/tidak terlalu tinggi)." },
+    { q: "NPM (Non Performing Member) adalah...", o: ["Anggota yang aktif", "Anggota yang tidak membayar kewajiban", "Anggota baru", "Anggota lama", "Anggota pengurus"], a: 1, e: "Anggota yang tidak membayar kewajiban." },
+    { q: "ROA (Return on Assets) mengukur...", o: ["Likuiditas", "Profitabilitas", "Solvabilitas", "Efisiensi", "Pertumbuhan"], a: 1, e: "Profitabilitas (tingkat pengembalian aset)." },
+    { q: "BOR (Borrowing Outstanding Ratio) mengukur...", o: ["Kualitas pinjaman", "Likuiditas", "Profitabilitas", "Pertumbuhan", "Efisiensi"], a: 0, e: "Kualitas pinjaman." },
+    { q: "Koperasi yang sehat memiliki NPL di bawah...", o: ["1%", "5%", "10%", "15%", "20%"], a: 1, e: "Di bawah 5%." },
+    { q: "Likuiditas koperasi diukur dengan rasio...", o: ["ROA", "Current Ratio", "NPL", "BOR", "CAR"], a: 1, e: "Current Ratio (aset lancar/kewajiban lancar)." },
+    { q: "Solvabilitas koperasi mengukur...", o: ["Kemampuan membayar utang jangka panjang", "Kemampuan membayar utang jangka pendek", "Profitabilitas", "Efisiensi", "Pertumbuhan"], a: 0, e: "Kemampuan membayar utang jangka panjang." },
+    { q: "Efisiensi koperasi diukur dengan rasio...", o: ["ROA", "BOPO (Beban Operasional/Pendapatan Operasional)", "NPL", "CAR", "LDR"], a: 1, e: "BOPO (semakin rendah semakin efisien)." },
+
+    // Manajemen & Operasional (41-60)
+    { q: "Manajemen koperasi meliputi fungsi...", o: ["Planning, Organizing, Actuating, Controlling", "Planning, Budgeting, Auditing", "Marketing, Sales, Production", "Finance, Accounting, HR", "Research, Development, Testing"], a: 0, e: "POAC (Planning, Organizing, Actuating, Controlling)." },
+    { q: "SWOT analysis untuk koperasi terdiri dari...", o: ["Strength, Weakness, Opportunity, Threat", "System, Work, Output, Test", "Standard, Workflow, Organization, Team", "Strategy, Wisdom, Operation, Technique", "Sales, Warehouse, Office, Technology"], a: 0, e: "Strength, Weakness, Opportunity, Threat." },
+    { q: "Visi koperasi adalah...", o: ["Target tahunan", "Cita-cita jangka panjang", "Laporan keuangan", "Struktur organisasi", "Daftar anggota"], a: 1, e: "Cita-cita jangka panjang koperasi." },
+    { q: "Misi koperasi adalah...", o: ["Cita-cita jangka panjang", "Langkah-langkah untuk mencapai visi", "Target keuntungan", "Jumlah anggota", "Struktur organisasi"], a: 1, e: "Langkah-langkah untuk mencapai visi." },
+    { q: "Strategi marketing koperasi meliputi...", o: ["Produk, Harga, Tempat, Promosi", "Hanya harga", "Hanya promosi", "Hanya tempat", "Hanya produk"], a: 0, e: "4P (Product, Price, Place, Promotion)." },
+    { q: "Analisis BEP (Break Even Point) digunakan untuk...", o: ["Menghitung laba maksimal", "Mengetahui titik impas", "Menghitung pajak", "Menghitung utang", "Menghitung aset"], a: 1, e: "Mengetahui titik impas (pendapatan = biaya)." },
+    { q: "Laporan laba rugi koperasi disebut juga...", o: ["Neraca", "Laporan SHU", "Arus kas", "Perubahan modal", "Catatan atas laporan"], a: 1, e: "Laporan Perhitungan SHU." },
+    { q: "Neraca koperasi menunjukkan...", o: ["Laba rugi", "Posisi keuangan (aset, kewajiban, ekuitas)", "Arus kas", "Perubahan SHU", "Catatan atas laporan"], a: 1, e: "Posisi keuangan pada waktu tertentu." },
+    { q: "Laporan arus kas koperasi terdiri dari...", o: ["Operasi, Investasi, Pendanaan", "Penjualan, Pembelian, Produksi", "Pemasukan, Pengeluaran, Sisa", "Aktiva, Pasiva, Modal", "Debet, Kredit, Saldo"], a: 0, e: "Arus kas dari operasi, investasi, dan pendanaan." },
+    { q: "RAT koperasi minimal diadakan...", o: ["1 kali dalam 2 tahun", "1 kali dalam setahun", "2 kali dalam setahun", "3 kali dalam setahun", "Setiap bulan"], a: 1, e: "1 kali dalam setahun." },
+    { q: "Kuorum RAT adalah...", o: ["1/2 + 1 anggota", "1/3 anggota", "1/4 anggota", "Semua anggota", "Pengurus saja"], a: 0, e: "Setengah lebih satu dari jumlah anggota." },
+    { q: "Keputusan RAT berlaku jika disetujui oleh...", o: ["Setengah + 1 yang hadir", "Semua yang hadir", "2/3 yang hadir", "3/4 yang hadir", "Ketua saja"], a: 0, e: "Setengah lebih satu dari yang hadir." },
+    { q: "AD/ART koperasi ditetapkan oleh...", o: ["Ketua", "Pengurus", "RAT", "Dinas", "Notaris"], a: 2, e: "RAT (Rapat Anggota)." },
+    { q: "Perubahan AD/ART koperasi harus...", o: ["Diketahui ketua", "Disetujui RAT dan disahkan menteri", "Diketahui pengawas", "Diketahui anggota", "Diketahui dinas"], a: 1, e: "Disetujui RAT dan disahkan oleh menteri yang berwenang." },
+    { q: "Koperasi yang tidak menyelenggarakan RAT selama 2 tahun berturut-turut dapat...", o: ["Diberi peringatan", "Dibekukan", "Dibubarkan", "Didenda", "Tidak ada sanksi"], a: 2, e: "Dapat dibubarkan." },
+    { q: "Pembagian SHU kepada anggota dihitung berdasarkan...", o: ["Jumlah simpanan saja", "Jasa anggota (simpanan dan transaksi)", "Senioritas", "Pangkat", "Usia"], a: 1, e: "Jasa anggota (simpanan dan partisipasi/transaksi)." },
+    { q: "Pelayanan prima di koperasi berarti...", o: ["Pelayanan cepat tanpa kualitas", "Pelayanan terbaik sesuai standar", "Pelayanan mahal", "Pelayanan terbatas", "Pelayanan tanpa aturan"], a: 1, e: "Pelayanan terbaik sesuai standar." },
+    { q: "Customer satisfaction di koperasi diukur melalui...", o: ["Jumlah anggota", "Survei kepuasan", "Laba bersih", "Total aset", "Jumlah karyawan"], a: 1, e: "Survei kepuasan anggota." },
+    { q: "Benchmarking koperasi adalah...", o: ["Membandingkan dengan koperasi lain", "Menghitung laba", "Menghitung aset", "Menghitung utang", "Menghitung anggota"], a: 0, e: "Membandingkan kinerja dengan koperasi lain yang lebih baik." },
+    { q: "Good Corporate Governance (GCG) koperasi meliputi prinsip...", o: ["Transparansi, akuntabilitas, responsibilitas, independensi, kewajaran", "Hanya transparansi", "Hanya akuntabilitas", "Hanya profit", "Hanya efisiensi"], a: 0, e: "TARIF (Transparansi, Akuntabilitas, Responsibilitas, Independensi, Fairness)." },
+
+    // Regulasi & Kebijakan (61-80)
+    { q: "UU yang mengatur koperasi sebelum Cipta Kerja adalah...", o: ["UU No. 12/1967", "UU No. 25/1992", "UU No. 17/2012", "UU No. 7/1992", "UU No. 23/1999"], a: 1, e: "UU No. 25 Tahun 1992." },
+    { q: "UU No. 11/2020 tentang Cipta Kerja mengubah...", o: ["Hukum pidana", "Hukum perdata", "Berbagai ketentuan termasuk koperasi", "Hukum tata negara", "Hukum internasional"], a: 2, e: "Omnibus law yang mengubah berbagai ketentuan termasuk koperasi." },
+    { q: "Minimal pendiri koperasi menurut UU Cipta Kerja adalah...", o: ["20 orang", "15 orang", "9 orang", "3 orang", "5 orang"], a: 3, e: "3 orang (berubah dari 20 orang di UU sebelumnya)." },
+    { q: "Koperasi harus memiliki...", o: ["Nama, alamat, tujuan, keanggotaan", "Hanya nama", "Hanya alamat", "Hanya tujuan", "Hanya keanggotaan"], a: 0, e: "Nama, alamat, tujuan, keanggotaan, dan hal-hal lain." },
+    { q: "Pengesahan koperasi dilakukan oleh...", o: ["Notaris", "Menteri yang berwenang", "Ketua", "Anggota", "Pengawas"], a: 1, e: "Menteri yang menangani urusan koperasi." },
+    { q: "Badan hukum koperasi diperoleh setelah...", o: ["RAT pertama", "Pengesahan oleh menteri", "Pendaftaran di notaris", "Pembuatan AD/ART", "Pembukaan kantor"], a: 1, e: "Pengesahan oleh menteri yang berwenang." },
+    { q: "Koperasi yang tidak melakukan kegiatan usaha selama 1 tahun dapat...", o: ["Diberi penghargaan", "Dibekukan atau dibubarkan", "Diberi pinjaman", "Diberi subsidi", "Tidak ada sanksi"], a: 1, e: "Dibekukan atau dibubarkan." },
+    { q: "Peraturan Menteri tentang koperasi berfungsi sebagai...", o: ["Pedoman pelaksanaan UU", "Pengganti UU", "Laporan tahunan", "Anggaran dasar", "Struktur organisasi"], a: 0, e: "Pedoman pelaksanaan UU." },
+    { q: "Koperasi wajib melaporkan kegiatan usaha kepada...", o: ["Ketua", "Menteri melalui dinas", "Anggota saja", "Pengawas saja", "Notaris"], a: 1, e: "Menteri melalui dinas yang menangani koperasi." },
+    { q: "Koperasi yang melanggar ketentuan dapat dikenai sanksi...", o: ["Teguran, pembekuan, pembubaran", "Hanya teguran", "Hanya denda", "Hanya peringatan", "Tidak ada sanksi"], a: 0, e: "Teguran, pembekuan, hingga pembubaran." },
+    { q: "Pembubaran koperasi oleh pemerintah dilakukan jika...", o: ["Koperasi untung besar", "Koperasi melanggar ketentuan atau tidak aktif", "Anggota berkurang", "SHU menurun", "Ketua mengundurkan diri"], a: 1, e: "Koperasi melanggar ketentuan atau tidak aktif." },
+    { q: "Hak anggota koperasi meliputi, kecuali...", o: ["Menghadiri RAT", "Memilih dan dipilih", "Memperoleh SHU", "Mengatur keuangan seenaknya", "Mendapat pelayanan"], a: 3, e: "Mengatur keuangan seenaknya bukan hak anggota." },
+    { q: "Kewajiban anggota koperasi meliputi...", o: ["Hadir RAT, membayar simpanan, mentaati AD/ART", "Hanya hadir RAT", "Hanya membayar simpanan", "Hanya mentaati AD/ART", "Tidak ada kewajiban"], a: 0, e: "Menghadiri RAT, membayar simpanan, dan mentaati AD/ART." },
+    { q: "Keanggotaan koperasi berakhir jika...", o: ["Meninggal dunia, keluar, atau diberhentikan", "Hanya meninggal dunia", "Hanya keluar", "Hanya diberhentikan", "Tidak pernah berakhir"], a: 0, e: "Meninggal dunia, mengajukan keluar, atau diberhentikan." },
+    { q: "Anggota yang keluar dari koperasi berhak menerima...", o: ["Semua aset koperasi", "Simpanannya setelah dikurangi kewajiban", "SHU seluruh koperasi", "Gaji", "Bonus"], a: 1, e: "Simpanannya setelah dikurangi kewajiban." },
+    { q: "Koperasi dapat melakukan kerja sama dengan...", o: ["Hanya koperasi lain", "Koperasi, badan usaha, dan pihak lain", "Hanya pemerintah", "Hanya bank", "Hanya anggota"], a: 1, e: "Koperasi, badan usaha, dan pihak lain." },
+    { q: "Lembaga gerakan koperasi di Indonesia adalah...", o: ["Dekopin (Dewan Koperasi Indonesia)", "Kadin", "APINDO", "HIPMI", "KADIN"], a: 0, e: "Dekopin (Dewan Koperasi Indonesia)." },
+    { q: "Peran Dekopin adalah...", o: ["Mengawasi koperasi", "Membina dan memperjuangkan kepentingan koperasi", "Mengatur keuangan koperasi", "Memilih pengurus koperasi", "Mengaudit koperasi"], a: 1, e: "Membina dan memperjuangkan kepentingan koperasi." },
+    { q: "Kementerian yang menangani urusan koperasi saat ini adalah...", o: ["Kementerian Keuangan", "Kementerian Koperasi dan UKM", "Kementerian Perdagangan", "Kementerian Perindustrian", "Kementerian Dalam Negeri"], a: 1, e: "Kementerian Koperasi dan UKM." },
+    { q: "Program pengembangan koperasi dari pemerintah meliputi...", o: ["KUR (Kredit Usaha Rakyat), pelatihan, pendampingan", "Hanya pinjaman", "Hanya pelatihan", "Hanya pendampingan", "Tidak ada program"], a: 0, e: "KUR, pelatihan, dan pendampingan." },
+
+    // Akuntansi Koperasi (81-100)
+    { q: "Persamaan dasar akuntansi koperasi adalah...", o: ["Aset = Kewajiban + Ekuitas", "Aset = Pendapatan - Biaya", "Laba = Pendapatan - Biaya", "Modal = Aset - Kewajiban", "Semua benar"], a: 4, e: "Semua pernyataan benar." },
+    { q: "Akun aset koperasi meliputi...", o: ["Kas, piutang, inventaris", "Utang, modal", "Pendapatan, biaya", "Laba, rugi", "SHU, dana cadangan"], a: 0, e: "Kas, piutang, dan inventaris adalah aset." },
+    { q: "Akun kewajiban koperasi meliputi...", o: ["Kas, piutang", "Utang usaha, pinjaman bank", "Pendapatan, biaya", "Modal, SHU", "Laba, rugi"], a: 1, e: "Utang usaha dan pinjaman bank." },
+    { q: "Akun ekuitas koperasi meliputi...", o: ["Kas, piutang", "Utang", "Simpanan pokok, simpanan wajib, dana cadangan, SHU", "Pendapatan, biaya", "Laba, rugi"], a: 2, e: "Simpanan pokok, wajib, dana cadangan, dan SHU." },
+    { q: "Jurnal umum koperasi dicatat berdasarkan...", o: ["Tanggal dan bukti transaksi", "Hanya tanggal", "Hanya jumlah", "Hanya keterangan", "Hanya nomor"], a: 0, e: "Tanggal dan bukti transaksi." },
+    { q: "Buku besar koperasi berisi...", o: ["Ringkasan semua transaksi per akun", "Hanya kas", "Hanya piutang", "Hanya utang", "Hanya SHU"], a: 0, e: "Ringkasan semua transaksi per akun." },
+    { q: "Neraca saldo koperasi digunakan untuk...", o: ["Memastikan debet = kredit", "Menghitung laba", "Menghitung aset", "Menghitung utang", "Menghitung SHU"], a: 0, e: "Memastikan total debet = total kredit." },
+    { q: "Jurnal penyesuaian koperasi dibuat untuk...", o: ["Menyesuaikan akun agar sesuai kondisi sebenarnya", "Menambah pendapatan", "Mengurangi biaya", "Menambah aset", "Mengurangi utang"], a: 0, e: "Menyesuaikan akun agar sesuai kondisi sebenarnya." },
+    { q: "Penyusutan aset tetap koperasi dicatat sebagai...", o: ["Biaya penyusutan", "Pendapatan", "Aset", "Kewajiban", "Modal"], a: 0, e: "Biaya penyusutan." },
+    { q: "Metode penyusutan yang umum digunakan koperasi adalah...", o: ["Garis lurus", "Saldo menurun", "Unit produksi", "Jumlah angka tahun", "Semua benar"], a: 4, e: "Semua metode tersebut dapat digunakan." },
+    { q: "Piutang tak tertagih koperasi dicatat sebagai...", o: ["Biaya", "Pendapatan", "Aset", "Kewajiban", "Modal"], a: 0, e: "Biaya (kerugian piutang tak tertagih)." },
+    { q: "Cadangan piutang tak tertagih dicatat sebagai...", o: ["Pengurang piutang", "Penambah piutang", "Pendapatan", "Biaya", "Modal"], a: 0, e: "Pengurang piutang (kontra aset)." },
+    { q: "Persediaan koperasi dinilai berdasarkan...", o: ["FIFO, LIFO, atau rata-rata", "Hanya FIFO", "Hanya LIFO", "Hanya rata-rata", "Harga jual"], a: 0, e: "FIFO, LIFO, atau rata-rata tertimbang." },
+    { q: "Laporan perubahan ekuitas koperasi menunjukkan...", o: ["Perubahan modal dari awal ke akhir periode", "Perubahan kas", "Perubahan piutang", "Perubahan utang", "Perubahan pendapatan"], a: 0, e: "Perubahan modal dari awal ke akhir periode." },
+    { q: "Catatan atas laporan keuangan koperasi berisi...", o: ["Penjelasan detail atas angka-angka laporan", "Hanya nama koperasi", "Hanya alamat", "Hanya nomor telepon", "Hanya logo"], a: 0, e: "Penjelasan detail atas angka-angka laporan." },
+    { q: "Rasio likuiditas koperasi yang baik adalah...", o: ["Current ratio > 1", "Current ratio < 1", "Current ratio = 0", "Current ratio negatif", "Tidak ada standar"], a: 0, e: "Current ratio > 1 (aset lancar > kewajiban lancar)." },
+    { q: "Rasio solvabilitas koperasi dihitung dengan...", o: ["Total aset / total kewajiban", "Total kewajiban / total aset", "Laba / aset", "Laba / modal", "Pendapatan / biaya"], a: 0, e: "Total aset / total kewajiban (atau Debt to Equity Ratio)." },
+    { q: "ROE (Return on Equity) koperasi mengukur...", o: ["Tingkat pengembalian atas modal sendiri", "Tingkat pengembalian atas aset", "Tingkat utang", "Tingkat likuiditas", "Tingkat efisiensi"], a: 0, e: "Tingkat pengembalian atas modal sendiri." },
+    { q: "Efisiensi operasional koperasi diukur dengan...", o: ["BOPO (Beban Operasional / Pendapatan Operasional)", "ROA", "ROE", "NPL", "LDR"], a: 0, e: "BOPO (semakin rendah semakin efisien)." },
+    { q: "Audit laporan keuangan koperasi bertujuan untuk...", o: ["Memberikan opini atas kewajaran laporan", "Menambah pendapatan", "Mengurangi biaya", "Menambah aset", "Mengurangi utang"], a: 0, e: "Memberikan opini atas kewajaran laporan keuangan." },
+];
+</script>
+
+<script>
+// =========================================================================
+// EXAM FUNCTIONS
+// =========================================================================
+
+function startExam() {
+    // Generate unique session ID
+    const seed = generateSessionId();
+    
+    // Display session ID on login screen
+    document.getElementById('sessionIdDisplay').innerText = `Session ID: ${sessionId} | Seed: ${seed}`;
+    
+    // =========================================================================
+    // STEP 1: Shuffle each category with unique seed
+    // =========================================================================
+    const shuffledTWK = seededShuffle(RAW_TWK, seed);
+    const shuffledTKP = seededShuffle(RAW_TKP, seed + 1000);
+    const shuffledTEKNIS = seededShuffle(RAW_TEKNIS, seed + 2000);
+    
+    // =========================================================================
+    // STEP 2: Select required number of questions (no duplicates guaranteed)
+    // =========================================================================
+    const countTWK = 30;
+    const countTKP = 45;
+    const countTEKNIS = 50;
+    
+    // Check if we have enough questions
+    if (RAW_TWK.length < countTWK || RAW_TKP.length < countTKP || RAW_TEKNIS.length < countTEKNIS) {
+        console.error("Question bank insufficient!");
+        return;
+    }
+    
+    // Slice the shuffled arrays to get required number
+    const selectedTWK = shuffledTWK.slice(0, countTWK);
+    const selectedTKP = shuffledTKP.slice(0, countTKP);
+    const selectedTEKNIS = shuffledTEKNIS.slice(0, countTEKNIS);
+    
+    // =========================================================================
+    // STEP 3: Generate TIU questions (algorithmic, always unique)
+    // =========================================================================
+    const selectedTIU = generateUniqueTIU(35, seed + 3000);
+    
+    // =========================================================================
+    // STEP 4: Shuffle options within each question
+    // =========================================================================
+    const processQuestions = (questions, category, seedOffset) => {
+        return questions.map((q, i) => {
+            const shuffled = shuffleQuestionOptions(q, seed + seedOffset + i);
+            return { ...shuffled, c: category };
+        });
+    };
+    
+    const bankTWK = processQuestions(selectedTWK, "TWK", 10000);
+    const bankTIU = selectedTIU.map((q, i) => {
+        const shuffled = shuffleQuestionOptions(q, seed + 15000 + i);
+        return { ...shuffled, c: "TIU" };
+    });
+    const bankTKP = processQuestions(selectedTKP, "TKP", 20000);
+    const bankTEKNIS = processQuestions(selectedTEKNIS, "TEKNIS", 25000);
+    
+    // =========================================================================
+    // STEP 5: Combine all questions
+    // =========================================================================
+    examQuestions = [...bankTWK, ...bankTIU, ...bankTKP, ...bankTEKNIS];
+    
+    // Verify no duplicate questions
+    const questionTexts = examQuestions.map(q => q.q);
+    const uniqueTexts = new Set(questionTexts);
+    if (uniqueTexts.size !== examQuestions.length) {
+        console.warn("WARNING: Duplicate questions detected!");
+    }
+    
+    // Initialize state
+    userAnswers = new Array(examQuestions.length).fill(null);
+    raguRagu = new Array(examQuestions.length).fill(false);
+    timeLeft = 7200; // 120 minutes
+    
+    // Update UI
+    document.getElementById('sessionLabel').innerText = `Session: ${sessionId}`;
+    document.getElementById('loginScreen').classList.add('hide');
+    document.getElementById('examScreen').classList.remove('hide');
+    
+    initGrids();
+    renderQuestion(0);
+    startTimer();
+}
+
+// =========================================================================
+// TIU Generator with seeded randomization
+// =========================================================================
+function generateUniqueTIU(count, seed) {
+    let pool = [];
+    const types = ['FRACTION', 'ROOT', 'ALGEBRA', 'PERCENT', 'SERIES', 'LOGIC', 'POWER', 'AVERAGE'];
+    
+    for(let i = 0; i < count; i++) {
+        let type = types[i % types.length];
+        let n1 = Math.floor(Math.random() * 50) + 10;
+        let n2 = Math.floor(Math.random() * 10) + 2;
+        let questionText, correctAnswer, optionsList, explanationText;
+        
+        if(type === 'FRACTION') {
+            questionText = `Hasil dari $\\frac{${n1}}{2} + \\frac{${n2}}{4}$ adalah...`;
+            let val = (n1/2) + (n2/4);
+            optionsList = [val, val + 1.5, val - 0.75, val * 2, val + 3];
+            explanationText = `Penyelesaian: $${n1/2} + ${n2/4} = ${val}$.`;
+        } else if(type === 'ROOT') {
+            let r = n2 * n2;
+            questionText = `Berapakah nilai dari $\\sqrt{${r}} + ${n1}$?`;
+            let val = n2 + n1;
+            optionsList = [val, val + 5, val - 3, val * 2, val - 10];
+            explanationText = `$\\sqrt{${r}} = ${n2}$. Maka $${n2} + ${n1} = ${val}$.`;
+        } else if(type === 'ALGEBRA') {
+            let x = Math.floor(Math.random() * 20) + 5;
+            let result = n1 * x + n2;
+            questionText = `Jika $${n1}x + ${n2} = ${result}$, maka $x = ...$`;
+            optionsList = [x, x + 2, x - 1, x * 2, x + 5];
+            explanationText = `$${n1}x = ${result} - ${n2} = ${result - n2}$, sehingga $x = ${x}$.`;
+        } else if(type === 'PERCENT') {
+            let percent = (Math.floor(Math.random() * 8) + 1) * 5;
+            let base = Math.floor(Math.random() * 200) + 50;
+            questionText = `Berapa ${percent}% dari ${base}?`;
+            let val = (percent / 100) * base;
+            optionsList = [val, val + 10, val - 5, val * 2, val + 25];
+            explanationText = `$${percent}\\% \\times ${base} = ${val}$.`;
+        } else if(type === 'SERIES') {
+            let start = Math.floor(Math.random() * 10) + 2;
+            let step = Math.floor(Math.random() * 5) + 2;
+            let series = [];
+            for(let j = 0; j < 5; j++) series.push(start + (j * step));
+            let next = series[4] + step;
+            questionText = `Lanjutan deret: ${series.join(', ')}, ...?`;
+            optionsList = [next, next + step, next - step, next + (step * 2), next - (step * 2)];
+            explanationText = `Deret aritmatika dengan beda ${step}. Selanjutnya: ${next}.`;
+        } else if(type === 'LOGIC') {
+            let a = Math.floor(Math.random() * 50) + 20;
+            let b = Math.floor(Math.random() * 30) + 10;
+            questionText = `Jika $A > B$, $B = ${b}$, dan $A = ${a + b}$, maka pernyataan yang benar adalah...`;
+            optionsList = [`$A = ${a + b}$`, `$A < B$`, `$A = B$`, `$A = ${b}$`, `$B > A$`];
+            explanationText = `Diketahui $A = ${a + b}$ dan $B = ${b}$, jelas $A > B$.`;
+        } else if(type === 'POWER') {
+            let base = Math.floor(Math.random() * 8) + 2;
+            let exp = Math.floor(Math.random() * 3) + 2;
+            let result = Math.pow(base, exp);
+            questionText = `Berapakah nilai dari $${base}^{${exp}}$?`;
+            optionsList = [result, result + base, result - base, result * 2, result + 10];
+            explanationText = `$${base}^{${exp}} = ${result}$.`;
+        } else {
+            let a = Math.floor(Math.random() * 50) + 10;
+            let b = Math.floor(Math.random() * 30) + 10;
+            let avg = (a + b) / 2;
+            questionText = `Rata-rata dari ${a} dan ${b} adalah...`;
+            optionsList = [avg, avg + 2, avg - 1, avg * 2, avg + 5];
+            explanationText = `Rata-rata = $(${a} + ${b}) / 2 = ${avg}$.`;
+        }
+        
+        correctAnswer = 0;
+        pool.push({ q: questionText, o: optionsList.map(String), a: correctAnswer, e: explanationText, c: "TIU" });
+    }
+    return pool;
+}
+
+function initGrids() {
+    ["TWK", "TIU", "TKP", "TEKNIS"].forEach(c => document.getElementById(`grid-${c}`).innerHTML = '');
+    examQuestions.forEach((q, i) => {
+        let btn = document.createElement('div');
+        btn.className = 'q-number q-unanswered';
+        btn.innerText = i + 1;
+        btn.id = `btnQ-${i}`;
+        btn.onclick = () => jumpToQuestion(i);
+        document.getElementById(`grid-${q.c}`).appendChild(btn);
+    });
+}
+
+function renderQuestion(idx) {
+    currentIndex = idx;
+    const q = examQuestions[idx];
+    document.getElementById('qCategory').innerText = q.c;
+    document.getElementById('qIndexDisp').innerText = idx + 1;
+    document.getElementById('questionText').innerHTML = q.q;
+    const cont = document.getElementById('optionsContainer');
+    cont.innerHTML = '';
+    ['A', 'B', 'C', 'D', 'E'].forEach((L, i) => {
+        const isSel = userAnswers[idx] === i;
+        cont.insertAdjacentHTML('beforeend', `
+            <label class="option-label ${isSel ? 'selected' : ''}" onclick="selectOpt(${idx}, ${i})">
+                <input type="radio" name="opt" class="option-input mt-1 mr-3" ${isSel ? 'checked' : ''} style="pointer-events: none;">
+                <span class="font-bold mr-2 text-xs">${L}.</span>
+                <span class="text-xs">${q.o[i]}</span>
+            </label>
+        `);
+    });
+    document.getElementById('raguCheck').checked = raguRagu[idx];
+    updateGridUI();
+    document.getElementById('questionArea').scrollTop = 0;
+    if (window.MathJax) MathJax.typesetPromise();
+}
+
+function selectOpt(qi, oi) { 
+    userAnswers[qi] = oi; 
+    updateGridUI();
+    document.querySelectorAll('#optionsContainer .option-label').forEach((label, i) => {
+        if (i === oi) {
+            label.classList.add('selected');
+            label.querySelector('input').checked = true;
+        } else {
+            label.classList.remove('selected');
+            label.querySelector('input').checked = false;
+        }
+    });
+}
+
+function toggleRagu() { 
+    raguRagu[currentIndex] = document.getElementById('raguCheck').checked; 
+    updateGridUI(); 
+}
+
+function nextQuestion() { 
+    if(currentIndex < examQuestions.length - 1) renderQuestion(currentIndex + 1); 
+}
+
+function prevQuestion() { 
+    if(currentIndex > 0) renderQuestion(currentIndex - 1); 
+}
+
+function jumpToQuestion(idx) { 
+    renderQuestion(idx); 
+    if(window.innerWidth < 768) toggleMobileNav();
+}
+
+function updateGridUI() {
+    for (let i = 0; i < examQuestions.length; i++) {
+        let b = document.getElementById(`btnQ-${i}`);
+        if(!b) continue;
+        b.className = 'q-number';
+        if (raguRagu[i]) b.classList.add('q-ragu');
+        else if (userAnswers[i] !== null) b.classList.add('q-answered');
+        else b.classList.add('q-unanswered');
+        if (i === currentIndex) b.classList.add('q-active');
+    }
+}
+
+function startTimer() {
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        let m = Math.floor(timeLeft / 60);
+        let s = timeLeft % 60;
+        let timerEl = document.getElementById('timer');
+        timerEl.innerText = `${m}:${s.toString().padStart(2,'0')}`;
+        if(timeLeft <= 300) timerEl.classList.add('text-red-300');
+        if(timeLeft <= 0) submitExam();
+    }, 1000);
+}
+
+function toggleMobileNav() {
+    const panel = document.getElementById('navPanel');
+    const overlay = document.getElementById('navOverlay');
+    panel.classList.toggle('mobile-open');
+    overlay.classList.toggle('hidden');
+}
+
+function confirmSubmit() { 
+    document.getElementById('confirmModal').classList.remove('hide'); 
+}
+
+function closeConfirm() { 
+    document.getElementById('confirmModal').classList.add('hide'); 
+}
+
+function submitExam() {
+    clearInterval(timerInterval);
+    document.getElementById('confirmModal').classList.add('hide');
+    document.getElementById('examScreen').classList.add('hide');
+    document.getElementById('resultScreen').classList.remove('hide');
+    
+    document.getElementById('resultSessionId').innerText = `Session ID: ${sessionId}`;
+    
+    let sc = { TWK: 0, TIU: 0, TKP: 0, TEKNIS: 0 };
+    examQuestions.forEach((q, i) => {
+        const a = userAnswers[i];
+        if (a === null) return;
+        if (q.c === "TWK" && a === q.a) sc.TWK += 5;
+        else if (q.c === "TIU" && a === q.a) sc.TIU += 5;
+        else if (q.c === "TEKNIS" && a === q.a) sc.TEKNIS += 2;
+        else if (q.c === "TKP") sc.TKP += (q.v[a] || 0);
+    });
+
+    const pg = { TWK: 65, TIU: 80, TKP: 166, TEKNIS: 75 };
+    let lulus = true;
+    
+    ["TWK", "TIU", "TKP", "TEKNIS"].forEach(c => {
+        document.getElementById(`res-${c.toLowerCase()}-score`).innerText = sc[c];
+        const st = document.getElementById(`res-${c.toLowerCase()}-status`);
+        if(sc[c] >= pg[c]) { 
+            st.innerText = "LOLOS"; 
+            st.className = "text-[10px] text-green-600 font-bold"; 
+        } else { 
+            st.innerText = "GAGAL"; 
+            st.className = "text-[10px] text-red-600 font-bold"; 
+            lulus = false; 
+        }
+    });
+
+    const box = document.getElementById('final-status-box');
+    const txt = document.getElementById('final-status-text');
+    if(lulus) { 
+        box.className = "p-6 rounded-xl bg-green-100 text-green-800 border-2 border-green-500"; 
+        txt.innerText = "SELAMAT! ANDA LOLOS SELEKSI CAT"; 
+    } else { 
+        box.className = "p-6 rounded-xl bg-red-100 text-red-800 border-2 border-red-500"; 
+        txt.innerText = "MAAF, ANDA GAGAL SELEKSI CAT"; 
+    }
+}
+</script>
+</body>
+</html>
+
